@@ -1,0 +1,11 @@
+# path to file
+file = DSCAM_coords.csv
+
+# percent of matching introns for grouping
+percent = 85
+
+# output format
+output = csv
+
+# number of organisms for constructing groups
+organism_number = 10
