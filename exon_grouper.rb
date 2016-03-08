@@ -17,9 +17,9 @@ class ExonGrouper
 
 	def initialize(options)
 
-		@path_to_file = options["path"]
-		@percent = options["percent"]
-		@organism_number = options["organism_number"]
+		@path_to_file = options["file"]
+		@percent = options["percent"].to_i
+		@organism_number = options["organism_number"].to_i
 
 		@genes = []
 	end
