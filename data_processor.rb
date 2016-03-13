@@ -23,6 +23,7 @@ class DataProcessor
 		current_start = row.first.split(";").last.gsub!("(","").to_i
 		row.delete_at(0)
 		current_exons = []
+		# парсит csv и сохраняет экзоны в гены
 		row.each_with_index do |exon_range, exon_index|
 			exon_finish,exon_start = exon_range.split(";")
 			current_exons.push(Exon.new(current_start,exon_finish.gsub(")","").to_i, "#{index} #{exon_index}"))

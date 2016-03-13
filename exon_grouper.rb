@@ -29,15 +29,18 @@ class ExonGrouper
 	end
 
 	def prepare_data
+		# отбираются только первые @organism_number организмов
 		@genes = DataProcessor.new(@raw_data).prepare[0..(@organism_number)]
 	end
 
 	def group
 		exons = []
+		# создаются связи между экзонами (какие вложены в какие)
 		make_connections
 	  @genes.each do |gene|	
 	  	exons += gene.exons
 	  end
+	  # нумеруются группы вложенности
 	  make_groups(exons)
 	end
 
@@ -47,17 +50,18 @@ class ExonGrouper
 			if exon.group == -1
 				exon.group = group
 				group += 1
-				process_exon(exon)
+				# проходим по всем вложенным, и проставляем им группу текущего
+				set_groups_for_connected(exon)
 			end
 		end
 		@max_group = group  
 	end
 
-	def process_exon(exon)
+	def set_groups_for_connected(exon)
 		exon.connections.each do |connected_exon|
 			if connected_exon.group == -1
 				connected_exon.group = exon.group
-				process_exon(connected_exon)
+				set_groups_for_connected(connected_exon)
 			end
 		end
 	end
@@ -67,10 +71,15 @@ class ExonGrouper
 			break if index+1 == @genes.length-1
 			@genes[(index+1)..-1].each do |match_gene|
 				gene.exons.each do |exon|
+					exon_includes = false # флаг того, вложен ли экзон в кого-то
 					match_gene.exons.each_with_index do |match_exon,current_position|
-						if exon.include?(match_exon, @percent)
+						# проверяем вложен ли экзон, с учётои процента совпадения из options
+						if exon.include?(match_exon, @percent) 
+							exon_includes = true
 							exon.connections << match_exon
 							match_exon.connections << exon
+						elsif exon_includes
+							break
 						end
 					end
 				end

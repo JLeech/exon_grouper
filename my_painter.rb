@@ -49,8 +49,11 @@ options = read_options
 exit unless check_options(options)
 
 exon_grouper = ExonGrouper.new(options)
+# чтение входного файлв
 exon_grouper.read_csv
+# создание генов и заполнение их экзонами
 exon_grouper.prepare_data
+# групировка на основе вложенности
 exon_grouper.group
 #exon_grouper.print_groups_coords
 #exon_grouper.print_groups

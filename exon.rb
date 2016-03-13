@@ -13,6 +13,7 @@ class Exon
 	end
 
 	def include?(exon, match_persent)
+		# процент вложенности считается для наименьшего экзона
 		first_range = (start..finish)
 		second_range = (exon.start..exon.finish)
 		match_length = ([first_range.begin,second_range.begin].max..[first_range.max,second_range.max].min).size
@@ -23,10 +24,4 @@ class Exon
 		end
 	end
 
-	def intersection_length(exon)
-		first_range = (start..finish)
-		second_range = (exon.start..exon.finish)
-		match_length = ([first_range.begin,second_range.begin].max..[first_range.max,second_range.max].min).size
-		return match_length
-	end
 end
