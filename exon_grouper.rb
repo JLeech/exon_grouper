@@ -35,7 +35,7 @@ class ExonGrouper
 	def group
 		exons = []
 		make_connections
-	  @genes.each do |gene|
+	  @genes.each do |gene|	
 	  	exons += gene.exons
 	  end
 	  make_groups(exons)
@@ -66,18 +66,11 @@ class ExonGrouper
 		@genes.each_with_index do |gene, index|
 			break if index+1 == @genes.length-1
 			@genes[(index+1)..-1].each do |match_gene|
-				match_exon_position = 0
-				match_found = false
 				gene.exons.each do |exon|
-					match_gene.exons[match_exon_position..-1].each_with_index do |match_exon,current_position|
-						if exon.include?(match_exon,@percent)
-							if match_found == false
-								match_exon_position = current_position
-							end
+					match_gene.exons.each_with_index do |match_exon,current_position|
+						if exon.include?(match_exon, @percent)
 							exon.connections << match_exon
 							match_exon.connections << exon
-						elsif match_found == true
-							break
 						end
 					end
 				end
