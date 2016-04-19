@@ -19,6 +19,11 @@ def check_options(options)
 		puts "no file selected"
 		return false
 	end
+
+	if options["allignement"].nil?
+		puts "no allignement selected"
+		return false
+	end
 	
 	if options["percent"].nil?
 		puts "no percent setted"
@@ -49,8 +54,6 @@ options = read_options
 exit unless check_options(options)
 
 exon_grouper = ExonGrouper.new(options)
-# чтение входного файлв
-exon_grouper.read_csv
 # создание генов и заполнение их экзонами
 exon_grouper.prepare_data
 # групировка на основе вложенности
@@ -59,6 +62,6 @@ exon_grouper.group
 #exon_grouper.print_groups
 #exon_grouper.print_group_count
 if options["output"] == "csv"
-	exon_grouper.print_groups_as_csv
-	exon_grouper.print_group_count_as_csv
+	exon_grouper.print_groups_coords
+	#exon_grouper.print_group_count_as_csv
 end
