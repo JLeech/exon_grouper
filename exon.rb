@@ -16,25 +16,26 @@ class Exon
 	end
 
 	def include?(exon, match_persent, blossum)
-		click_include(exon)
 		# процент вложенности считается для наименьшего экзона
-		# first_range = (start..finish)
-		# second_range = (exon.start..exon.finish)
-		# match_length = ([first_range.begin, second_range.begin].max..[first_range.max, second_range.max].min).size
-		# if match_length >= [first_range.size, second_range.size].min * match_persent / 100.0
-		# 	#puts count_with_blossum(exon, blossum)/max_blossum(blossum)
-		# 	return true
-		# else
-		# 	return false
-		# end
+		if match_persent == 100
+			#count_with_blossum(exon, blossum)/max_blossum(blossum)
+			return click_include(exon) 
+		end
+		first_range = (start..finish)
+		second_range = (exon.start..exon.finish)
+		match_length = ([first_range.begin, second_range.begin].max..[first_range.max, second_range.max].min).size
+		if match_length >= [first_range.size, second_range.size].min * match_persent / 100.0
+			#puts count_with_blossum(exon, blossum)/max_blossum(blossum)
+			return true
+		else
+			return false
+		end
 	end
 
 	def click_include(exon)
 		return true if start == exon.start && finish == exon.finish
 		return false
 	end
-
-private
 
 	def max_blossum(blossum)
 		max_score = 0.0

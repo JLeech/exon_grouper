@@ -40,7 +40,7 @@ class ExonGrouper
 	  @genes.each do |gene|	
 	  	exons += gene.exons
 	  end
-	  # нумеруются группы вложенности
+	  #нумеруются группы вложенности
 	  make_groups(exons)
 	end
 
@@ -48,11 +48,20 @@ class ExonGrouper
 		@genes.each_with_index do |gene, index|
 			break if index+1 == @genes.length-1
 			@genes[(index+1)..-1].each do |match_gene|
-				gene.exons.each do |exon|
+				gene.exons.each_with_index do |exon, gene_index|
 					exon_includes = false # флаг того, вложен ли экзон в кого-то
-					match_gene.exons.each_with_index do |match_exon,current_position|
-						# проверяем вложен ли экзон, с учётои процента совпадения из options
-						if exon.include?(match_exon, @percent, blossum_matrix) 
+					match_gene.exons.each_with_index do |match_exon, match_gene_index|
+						# проверяем вложен ли экзон, с учётом процента совпадения из options
+						if exon.include?(match_exon, @percent, blossum_matrix)
+							blos = exon.count_with_blossum(match_exon, blossum_matrix)
+							max_blos = exon.max_blossum(blossum_matrix)
+							# puts "-------------------------"
+							# puts "#{gene.name} : (#{gene_index + 1})"
+							# puts "#{match_gene.name} : (#{match_gene_index + 1}})"
+							# puts "one to one : #{blos}"
+							# puts "max for one: #{max_blos}"
+							# puts "percents   : #{(blos/max_blos*100).round}%"
+							# puts "-------------------------"
 							exon_includes = true
 							exon.connections << match_exon
 							match_exon.connections << exon
@@ -135,6 +144,41 @@ class ExonGrouper
 			end
 			puts "[#{exon_groups}],"
 		end
+	end
+
+	def draw_as_svg_rectangels
+		svg_width = @genes.first.allignement_length*2 + 200
+		svg_height = @genes.count * 40 + 40
+		File.open("test.svg", 'w') do |file|
+			file.write("<svg width=\"#{svg_width}\" height=\"#{svg_height}\">")
+			file.write("<rect x=\"0\" y=\"0\" width=\"#{svg_width}\" height=\"#{svg_height}\" style=\"fill:white;\" />")
+			@genes.each_with_index do |gene, index|
+				draw_gene_line(index, svg_width, file)
+				gene.exons.each do |exon|
+					draw_exon_box(index, exon, file)
+				end
+			end
+			file.write("</svg>")
+		end
+	end
+
+
+private
+	
+	def draw_gene_line(index, svg_width, file)
+		y_coords = 40*(index+1)
+		x_start_coords = 100
+		x_end_coords = svg_width - 100
+		file.write("<line x1=\"#{x_start_coords}\" y1=\"#{y_coords}\" x2=\"#{x_end_coords}\" y2=\"#{y_coords}\" style=\"stroke:rgb(0,0,0);stroke-width:1\" />")
+	end
+
+	def draw_exon_box(index, exon, file)
+		y_coords = 40*(index+1)
+		x_start_coords = 100
+		width = exon.finish - exon.start
+		file.write("<rect x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords-15}\" width=\"#{width*2}\" height=\"30\" style=\"fill:rgb(204,255,51);stroke:black;stroke-width:1\" />\n")
+		#file.write("<text x=\"#{(exon.start+x_start_coords)*2+10}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.start}:#{exon.finish})</text>")
+		file.write("<text x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.finish - exon.start})</text>")
 	end
 
 	# def print_group_count

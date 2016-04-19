@@ -5,7 +5,7 @@ file = DSCAM_coords.csv
 allignement = DSCAM_proteins_aligned.fasta
 
 # percent of matching introns for grouping
-percent = 100
+percent = 90
 
 # output format
 output = csv

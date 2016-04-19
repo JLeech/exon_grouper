@@ -31,7 +31,7 @@ class DataProcessor
 
 			current_exons.push( Exon.new(exon_start, exon_finish, organism_allignement[exon_start, exon_finish]) )
 		end
-		gene = Gene.new(organism_name, current_exons, index)
+		gene = Gene.new(organism_name, current_exons, index, organism_allignement.length)
 		return gene
 	end
 

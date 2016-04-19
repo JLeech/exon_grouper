@@ -1,4 +1,3 @@
-
 require_relative "exon_grouper"
 
 def read_options
@@ -61,7 +60,8 @@ exon_grouper.group
 #exon_grouper.print_groups_coords
 #exon_grouper.print_groups
 #exon_grouper.print_group_count
-if options["output"] == "csv"
-	exon_grouper.print_groups_coords
+if options["output"] == "csv"	
 	#exon_grouper.print_group_count_as_csv
 end
+exon_grouper.draw_as_svg_rectangels
+#exon_grouper.print_groups_coords
