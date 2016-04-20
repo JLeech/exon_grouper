@@ -57,7 +57,7 @@ exon_grouper = ExonGrouper.new(options)
 exon_grouper.prepare_data
 # групировка на основе вложенности
 exon_grouper.group
-#exon_grouper.print_groups_coords
+exon_grouper.print_groups_coords
 #exon_grouper.print_groups
 #exon_grouper.print_group_count
 if options["output"] == "csv"	
