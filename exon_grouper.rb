@@ -19,7 +19,7 @@ class ExonGrouper
 	attr_accessor :organisms
 	attr_accessor :max_group
 
-	def initialize(options)
+	def initialize(options = {})
 
 		@path_to_file = options["file"]
 		@path_to_allignement = options["allignement"]
@@ -55,19 +55,17 @@ class ExonGrouper
 					match_organism.exons.each_with_index do |match_exon, match_organism_index|
 						# проверяем вложен ли экзон, с учётом процента совпадения из options
 						if exon.include?(match_exon, @percent, blossum_matrix)
+							puts "_________________________"
 							blos = exon.count_with_blossum(match_exon, blossum_matrix)
 							max_blos = exon.max_blossum(blossum_matrix)
-							puts "-------------------------"
-							puts "#{organism.name} : exon_number:[#{organism_index}]"
+							puts "\n#{organism.name} : exon_number:[#{organism_index}]"
 							puts "#{match_organism.name} : exon_number:[#{match_organism_index}]"
-							puts exon.allignement
-							puts match_exon.allignement
 							puts "#{exon.start} : #{exon.finish})"
 							puts "#{match_exon.start} : #{match_exon.finish}"
 							puts "one to one : #{blos}"
 							puts "max for one: #{max_blos}"
 							puts "percents   : #{(blos/max_blos*100).round}%"
-							puts "-------------------------"
+							puts "_________________________"
 							exon_includes = true
 							exon.connections << match_exon
 							match_exon.connections << exon
