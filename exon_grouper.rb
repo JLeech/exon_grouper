@@ -6,6 +6,8 @@ require_relative "organism.rb"
 require_relative "data_processor"
 
 class ExonGrouper
+
+	BLOSSUM_PATH = "./data/blosum_penalty_matrix"
 	
 	attr_accessor :path_to_file
 	attr_accessor :path_to_allignement
@@ -104,7 +106,7 @@ class ExonGrouper
 		alphabet = []
 		tmp_array = []
 		blossum_matrix = Hash.new { |hash, key| hash[key] = Hash.new { |hash, key| hash[key] = 0 } }
-		File.readlines("blosum_penalty_matrix").each_with_index do |line, index|
+		File.readlines(BLOSSUM_PATH).each_with_index do |line, index|
 			next if [0,2].include?(index)
 			if index == 1
 				alphabet = line.strip.split(" ")

@@ -1,8 +1,8 @@
 # path to file
-file = MDGA2_align_coords.csv
+file = ./data/MDGA2_align_coords.csv
 
 # path to allignement file
-allignement = mdga2_proteins_aligned.fasta
+allignement = ./data/mdga2_proteins_aligned.fasta
 
 # percent of matching introns for grouping
 percent = 90

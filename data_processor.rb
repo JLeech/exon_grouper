@@ -19,13 +19,15 @@ class DataProcessor
 		return @organisms
 	end
 
+private
+
 	def parse_organism(row, index)
 		current_exons = []
 		parsed_coords_and_name = row.join(",").split(";")
 		coordinates = parsed_coords_and_name[1..(-1)]
 		organism_name = parsed_coords_and_name.first.strip
 		organism_allignement = get_allignement_for_organism(organism_name)
-		# парсит csv и сохраняет экзоны в гены
+		# парсит csv и сохраняет экзоны в организмы
 		coordinates.each do |exon_coordinates|
 			exon_start, exon_finish = get_coords(exon_coordinates)
 
