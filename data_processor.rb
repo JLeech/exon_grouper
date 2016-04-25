@@ -1,25 +1,25 @@
 require_relative "exon.rb"
-require_relative "gene.rb"
+require_relative "organism.rb"
 
 class DataProcessor
 
 	attr_accessor :raw_data
-	attr_accessor :genes
+	attr_accessor :organisms
 
 	def initialize(path_to_data_file, path_to_allignement_file)
 		@raw_data = CSV.read(path_to_data_file)
 		@path_to_allignement_file = path_to_allignement_file
-		@genes = []	
+		@organisms = []	
 	end
 
 	def prepare
 		@raw_data.each_with_index do |row, index|
-			@genes <<  parse_organism_gene(row, index)
+			@organisms <<  parse_organism(row, index)
 		end
-		return @genes
+		return @organisms
 	end
 
-	def parse_organism_gene(row, index)
+	def parse_organism(row, index)
 		current_exons = []
 		parsed_coords_and_name = row.join(",").split(";")
 		coordinates = parsed_coords_and_name[1..(-1)]
@@ -31,8 +31,8 @@ class DataProcessor
 
 			current_exons.push( Exon.new(exon_start, exon_finish, organism_allignement[exon_start, exon_finish]) )
 		end
-		gene = Gene.new(organism_name, current_exons, index, organism_allignement.length)
-		return gene
+		organism = Organism.new(organism_name, current_exons, index, organism_allignement.length)
+		return organism
 	end
 
 	def get_coords(coords_block)

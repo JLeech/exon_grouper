@@ -1,6 +1,6 @@
 require_relative "exon.rb"
 
-class Gene
+class Organism
 
 	attr_accessor :name
 	attr_accessor :exons

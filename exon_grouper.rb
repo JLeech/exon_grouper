@@ -2,7 +2,7 @@ require "csv"
 require "json"
 
 require_relative "exon.rb"
-require_relative "gene.rb"
+require_relative "organism.rb"
 require_relative "data_processor"
 
 class ExonGrouper
@@ -14,7 +14,7 @@ class ExonGrouper
 
 	attr_accessor :blossum_matrix
 
-	attr_accessor :genes
+	attr_accessor :organisms
 	attr_accessor :max_group
 
 	def initialize(options)
@@ -25,39 +25,39 @@ class ExonGrouper
 		@organism_number = options["organism_number"].to_i
 
 		@blossum_matrix = parse_blossum
-		@genes = []
+		@organisms = []
 	end
 
 	def prepare_data
 		# отбираются только первые @organism_number организмов
-		@genes = DataProcessor.new(@path_to_file, @path_to_allignement).prepare[0..(@organism_number)]
+		@organisms = DataProcessor.new(@path_to_file, @path_to_allignement).prepare[0..(@organism_number)]
 	end
 
 	def group
 		exons = []
 		# создаются связи между экзонами (какие вложены в какие)
 		make_connections
-	  @genes.each do |gene|	
-	  	exons += gene.exons
+	  @organisms.each do |organism|	
+	  	exons += organism.exons
 	  end
 	  #нумеруются группы вложенности
 	  make_groups(exons)
 	end
 
 	def make_connections
-		@genes.each_with_index do |gene, index|
-			break if index+1 == @genes.length-1
-			@genes[(index+1)..-1].each do |match_gene|
-				gene.exons.each_with_index do |exon, gene_index|
+		@organisms.each_with_index do |organism, index|
+			break if index+1 == @organisms.length-1
+			@organisms[(index+1)..-1].each do |match_organism|
+				organism.exons.each_with_index do |exon, organism_index|
 					exon_includes = false # флаг того, вложен ли экзон в кого-то
-					match_gene.exons.each_with_index do |match_exon, match_gene_index|
+					match_organism.exons.each_with_index do |match_exon, match_organism_index|
 						# проверяем вложен ли экзон, с учётом процента совпадения из options
 						if exon.include?(match_exon, @percent, blossum_matrix)
 							blos = exon.count_with_blossum(match_exon, blossum_matrix)
 							max_blos = exon.max_blossum(blossum_matrix)
 							puts "-------------------------"
-							puts "#{gene.name} : exon_number:[#{gene_index}]"
-							puts "#{match_gene.name} : exon_number:[#{match_gene_index}]"
+							puts "#{organism.name} : exon_number:[#{organism_index}]"
+							puts "#{match_organism.name} : exon_number:[#{match_organism_index}]"
 							puts exon.allignement
 							puts match_exon.allignement
 							puts "#{exon.start} : #{exon.finish})"
@@ -121,14 +121,14 @@ class ExonGrouper
 	end
 
 	def print_groups_coords
-		max_exon_count = @genes.map { |gene| gene.exons.length }.max
+		max_exon_count = @organisms.map { |organism| organism.exons.length }.max
 		puts max_exon_count
-		@genes.each do |gene|
+		@organisms.each do |organism|
 			exon_groups = " "
-			gene.exons.each do |exon|
+			organism.exons.each do |exon|
 				exon_groups += " \"#{exon.start}:#{exon.finish}\", "
 			end
-			(max_exon_count - gene.exons.count).times do 
+			(max_exon_count - organism.exons.count).times do 
 				exon_groups += " \"_____\", "
 			end
 			puts "[ #{exon_groups}],"
@@ -136,14 +136,14 @@ class ExonGrouper
 	end
 
 	def print_groups
-		max_exon_count = @genes.map { |gene| gene.exons.length }.max
+		max_exon_count = @organisms.map { |organism| organism.exons.length }.max
 		puts max_exon_count
-		@genes.each do |gene|
+		@organisms.each do |organism|
 			exon_groups = ""
-			gene.exons.each do |exon|
+			organism.exons.each do |exon|
 				exon_groups += "#{exon.group}, "
 			end
-			(max_exon_count - gene.exons.count).times do 
+			(max_exon_count - organism.exons.count).times do 
 				exon_groups += "-1, "
 			end
 			puts "[#{exon_groups}],"
@@ -151,16 +151,16 @@ class ExonGrouper
 	end
 
 	def draw_as_svg_rectangels
-		svg_width = @genes.first.allignement_length*2 + 200
-		svg_height = @genes.count * 40 + 40
+		svg_width = @organisms.first.allignement_length*2 + 200
+		svg_height = @organisms.count * 40 + 40
 		output_file_name = path_to_allignement.split('/').last.split("_").first
 		File.open("#{output_file_name}.svg", 'w') do |file|
 			file.write("<svg width=\"#{svg_width+100}\" height=\"#{svg_height}\">")
 			file.write("<rect x=\"0\" y=\"0\" width=\"#{svg_width+100}\" height=\"#{svg_height}\" style=\"fill:white;\" />")
-			@genes.each_with_index do |gene, index|
-				draw_gene_line(index, svg_width, file)
-				print_organism_name(gene, index, file)
-				gene.exons.each do |exon|
+			@organisms.each_with_index do |organism, index|
+				draw_organism_line(index, svg_width, file)
+				print_organism_name(organism, index, file)
+				organism.exons.each do |exon|
 					draw_exon_box(index, exon, file)
 				end
 			end
@@ -172,12 +172,12 @@ class ExonGrouper
 
 private
 	
-	def print_organism_name(gene, index, file)
+	def print_organism_name(organism, index, file)
 		y_coords = 40*(index+1) - 10
-		file.write("<text x=\"10\" y=\"#{y_coords}\" fill=\"black\" font-size=\"20px\">#{gene.name}</text>")
+		file.write("<text x=\"10\" y=\"#{y_coords}\" fill=\"black\" font-size=\"20px\">#{organism.name}</text>")
 	end
 
-	def draw_gene_line(index, svg_width, file)
+	def draw_organism_line(index, svg_width, file)
 		y_coords = 40*(index+1)
 		x_start_coords = 100
 		x_end_coords = svg_width - 100
@@ -194,9 +194,9 @@ private
 	end
 
 	# def print_group_count
-	# 	@genes.each do |gene|
+	# 	@organisms.each do |organism|
 	# 		groups = Array.new(@max_group, 0)
-	# 		gene.exons.each do |exon|
+	# 		organism.exons.each do |exon|
 	# 			groups[exon.group] += 1
 	# 		end
 	# 		groups_string = "[ "
@@ -212,10 +212,10 @@ private
 	# 	CSV.open("groups.csv", "wb") do |csv|
 	# 		out_data = ["organism name \\ exons"]
 	# 		csv << out_data
-	# 	  @genes.each do |gene|
+	# 	  @organisms.each do |organism|
 	# 			out_data = []
-	# 			out_data += [gene.name]
-	# 			out_data += gene.exons.map(&:group)		  	
+	# 			out_data += [organism.name]
+	# 			out_data += organism.exons.map(&:group)		  	
 	# 			csv << out_data	
 	# 	  end
 	# 	end
@@ -228,12 +228,12 @@ private
 	# 			out_data += ["group #{iter}"]
 	# 		end
 	# 		csv << out_data
-	# 		@genes.each do |gene|
+	# 		@organisms.each do |organism|
 	# 			groups = Array.new(@max_group, 0)
-	# 			gene.exons.each do |exon|
+	# 			organism.exons.each do |exon|
 	# 				groups[exon.group] += 1
 	# 			end	
-	# 			out_data = [gene.name]
+	# 			out_data = [organism.name]
 	# 			out_data += groups
 	# 			csv << out_data
 	# 		end
