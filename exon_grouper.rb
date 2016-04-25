@@ -166,7 +166,7 @@ class ExonGrouper
 			end
 			file.write("</svg>")
 		end
-		`inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
+		#`inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
 	end
 
 
