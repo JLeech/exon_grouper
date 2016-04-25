@@ -1,8 +1,8 @@
 # path to file
-file = DSCAM_coords.csv
+file = MDGA2_align_coords.csv
 
 # path to allignement file
-allignement = DSCAM_proteins_aligned.fasta
+allignement = mdga2_proteins_aligned.fasta
 
 # percent of matching introns for grouping
 percent = 90
@@ -11,4 +11,4 @@ percent = 90
 output = csv
 
 # number of organisms for constructing groups
-organism_number = 10
+organism_number = 2

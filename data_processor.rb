@@ -23,7 +23,7 @@ class DataProcessor
 		current_exons = []
 		parsed_coords_and_name = row.join(",").split(";")
 		coordinates = parsed_coords_and_name[1..(-1)]
-		organism_name = parsed_coords_and_name.first
+		organism_name = parsed_coords_and_name.first.strip
 		organism_allignement = get_allignement_for_organism(organism_name)
 		# парсит csv и сохраняет экзоны в гены
 		coordinates.each do |exon_coordinates|
@@ -41,7 +41,7 @@ class DataProcessor
 
 	def get_allignement_for_organism(organism_name)
 		found_flag = false
-		allignement_string = "" 
+		allignement_string = ""
 		File.readlines(@path_to_allignement_file).each do |line|
 			if found_flag
 				break if line.start_with?(">")

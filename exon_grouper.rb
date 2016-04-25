@@ -55,13 +55,17 @@ class ExonGrouper
 						if exon.include?(match_exon, @percent, blossum_matrix)
 							blos = exon.count_with_blossum(match_exon, blossum_matrix)
 							max_blos = exon.max_blossum(blossum_matrix)
-							# puts "-------------------------"
-							# puts "#{gene.name} : (#{gene_index + 1})"
-							# puts "#{match_gene.name} : (#{match_gene_index + 1}})"
-							# puts "one to one : #{blos}"
-							# puts "max for one: #{max_blos}"
-							# puts "percents   : #{(blos/max_blos*100).round}%"
-							# puts "-------------------------"
+							puts "-------------------------"
+							puts "#{gene.name} : exon_number:[#{gene_index}]"
+							puts "#{match_gene.name} : exon_number:[#{match_gene_index}]"
+							puts exon.allignement
+							puts match_exon.allignement
+							puts "#{exon.start} : #{exon.finish})"
+							puts "#{match_exon.start} : #{match_exon.finish}"
+							puts "one to one : #{blos}"
+							puts "max for one: #{max_blos}"
+							puts "percents   : #{(blos/max_blos*100).round}%"
+							puts "-------------------------"
 							exon_includes = true
 							exon.connections << match_exon
 							match_exon.connections << exon
@@ -100,7 +104,7 @@ class ExonGrouper
 		alphabet = []
 		tmp_array = []
 		blossum_matrix = Hash.new { |hash, key| hash[key] = Hash.new { |hash, key| hash[key] = 0 } }
-		File.readlines("blosum_penalty_matrix.txt").each_with_index do |line, index|
+		File.readlines("blosum_penalty_matrix").each_with_index do |line, index|
 			next if [0,2].include?(index)
 			if index == 1
 				alphabet = line.strip.split(" ")
@@ -149,22 +153,30 @@ class ExonGrouper
 	def draw_as_svg_rectangels
 		svg_width = @genes.first.allignement_length*2 + 200
 		svg_height = @genes.count * 40 + 40
-		File.open("test.svg", 'w') do |file|
-			file.write("<svg width=\"#{svg_width}\" height=\"#{svg_height}\">")
-			file.write("<rect x=\"0\" y=\"0\" width=\"#{svg_width}\" height=\"#{svg_height}\" style=\"fill:white;\" />")
+		output_file_name = path_to_allignement.split('/').last.split("_").first
+		File.open("#{output_file_name}.svg", 'w') do |file|
+			file.write("<svg width=\"#{svg_width+100}\" height=\"#{svg_height}\">")
+			file.write("<rect x=\"0\" y=\"0\" width=\"#{svg_width+100}\" height=\"#{svg_height}\" style=\"fill:white;\" />")
 			@genes.each_with_index do |gene, index|
 				draw_gene_line(index, svg_width, file)
+				print_organism_name(gene, index, file)
 				gene.exons.each do |exon|
 					draw_exon_box(index, exon, file)
 				end
 			end
 			file.write("</svg>")
 		end
+		`inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
 	end
 
 
 private
 	
+	def print_organism_name(gene, index, file)
+		y_coords = 40*(index+1) - 10
+		file.write("<text x=\"10\" y=\"#{y_coords}\" fill=\"black\" font-size=\"20px\">#{gene.name}</text>")
+	end
+
 	def draw_gene_line(index, svg_width, file)
 		y_coords = 40*(index+1)
 		x_start_coords = 100
