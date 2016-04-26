@@ -26,16 +26,16 @@ class ExonMatcher
 	def margin_allignements
 		start_diff = coords_1[0] - coords_2[0]
 		if start_diff > 0
-			self.seq_2 = "-"*start_diff + self.seq_2
+			self.seq_1 = "-"*start_diff + self.seq_1
 		else
-			self.seq_1 = "-"*(-start_diff) + self.seq_1
+			self.seq_2 = "-"*(-start_diff) + self.seq_2
 		end
-
-		end_diff = coords_1[1] - coords_2[1]
-		if end_diff > 0
-			self.seq_2 = self.seq_2 + "-"*((end_diff - start_diff).abs)
-		else
-			self.seq_1 = self.seq_1 + "-"*((end_diff - start_diff).abs)
+		max_length = [self.seq_1.length, self.seq_2.length].max
+		if self.seq_1.length < max_length
+			self.seq_1 = self.seq_1 + "-"*(max_length - self.seq_1.length)
+		end
+		if self.seq_2.length < max_length
+			self.seq_2 = self.seq_2 + "-"*(max_length - self.seq_2.length)
 		end
 	end
 

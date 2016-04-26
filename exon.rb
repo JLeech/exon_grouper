@@ -47,7 +47,6 @@ class Exon
 		current_allignement = allignement
 		match_allignement = exon.allignement
 		# margin allignement
-
 		current_allignement, match_allignement = margin_allignemet(current_allignement, match_allignement, [start, finish], [exon.start, exon.finish], blossum)
 		# puts "xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 		puts "#{current_allignement}"
@@ -83,20 +82,19 @@ private
 	def margin_allignemet(seq_1, seq_2, coords_1, coords_2, blossum)
 		start_diff = coords_1[0] - coords_2[0]
 		if start_diff > 0
-			seq_2 = "-"*start_diff + seq_2
+			seq_1 = "-"*start_diff + seq_1
 		else
-			seq_1 = "-"*(-start_diff) + seq_1
+			seq_2 = "-"*(-start_diff) + seq_2
 		end
 
-		end_diff = coords_1[1] - coords_2[1]
-		if end_diff > 0
-			seq_2 = seq_2 + "-"*((end_diff - start_diff).abs)
-		else
-			seq_1 = seq_1 + "-"*((end_diff - start_diff).abs)
+		max_length = [seq_1.length, seq_2.length].max
+		if seq_1.length < max_length
+			seq_1 = seq_1 + "-"*(max_length - seq_1.length)
+		end
+		if seq_2.length < max_length
+			seq_2 = seq_2 + "-"*(max_length - seq_2.length)
 		end
 		return seq_1, seq_2
 	end
-
-
 
 end
