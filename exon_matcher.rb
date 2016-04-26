@@ -56,8 +56,8 @@ class ExonMatcher
 			end
 
 			score_line += "#{score.to_s}|"
-			seq_1_line += " "*score.to_s.length << seq_1_char
-			seq_2_line += " "*score.to_s.length << seq_2_char
+			seq_1_line += " "*(score.to_s.length-1) + seq_1_char + "|"
+			seq_2_line += " "*(score.to_s.length-1) + seq_2_char + "|"
 
 		end
 		puts "score: #{score}"
