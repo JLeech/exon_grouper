@@ -57,8 +57,12 @@ class Exon
 		current_allignement.split("").each_with_index do |current_char, position|
 			match_char = match_allignement[position]
 			if current_char == "-" || match_char == "-"
-				match_score += start_gap_flag ? -9 : -2
-				start_gap_flag = false
+				if current_char == "-" && match_char == "-"
+					start_gap_flag = false	
+				else
+					match_score += start_gap_flag ? -9 : -2
+					start_gap_flag = false
+				end
 			else
 				start_gap_flag = true
 				match_score += blossum[current_char][match_char].nil? ? -9 : blossum[current_char][match_char]

@@ -11,4 +11,4 @@ percent = 90
 output = csv
 
 # number of organisms for constructing groups
-organism_number = 2
+organism_number = 10
