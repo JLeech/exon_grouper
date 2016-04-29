@@ -48,8 +48,12 @@ class ExonMatcher
 		self.seq_1.split("").each_with_index do |seq_1_char, position|
 			seq_2_char = seq_2[position]
 			if seq_1_char == "-" || seq_2_char == "-"
-				score += start_gap_flag ? -9 : -2
-				start_gap_flag = false
+				if seq_1_char == "-" && seq_2_char == "-"
+					start_gap_flag = false	
+				else
+					score += start_gap_flag ? -9 : -2
+					start_gap_flag = false
+				end
 			else
 				start_gap_flag = true
 				score += blosum[seq_1_char][seq_2[position]]

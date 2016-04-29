@@ -60,7 +60,7 @@ class ExonGrouper
 							max_blos = exon.max_blossum(blossum_matrix)
 							puts "\n#{organism.name} : exon_number:[#{organism_index + 1}]"
 							puts "#{match_organism.name} : exon_number:[#{match_organism_index + 1}]"
-							puts "#{exon.start} : #{exon.finish})"
+							puts "#{exon.start} : #{exon.finish}"
 							puts "#{match_exon.start} : #{match_exon.finish}"
 							puts "one to one : #{blos}"
 							puts "max for one: #{max_blos}"

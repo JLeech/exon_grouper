@@ -30,8 +30,7 @@ private
 		# парсит csv и сохраняет экзоны в организмы
 		coordinates.each do |exon_coordinates|
 			exon_start, exon_finish = get_coords(exon_coordinates)
-
-			current_exons.push( Exon.new(exon_start, exon_finish, organism_allignement[exon_start, exon_finish]) )
+			current_exons.push( Exon.new(exon_start, exon_finish, organism_allignement[exon_start..exon_finish]) )
 		end
 		organism = Organism.new(organism_name, current_exons, index, organism_allignement.length)
 		return organism

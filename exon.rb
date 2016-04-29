@@ -44,6 +44,8 @@ class Exon
 
 	def count_with_blossum(exon, blossum)
 		match_score = 0.0
+		# puts "#{allignement}"
+		# puts "#{exon.allignement}"
 		current_allignement = allignement
 		match_allignement = exon.allignement
 		# margin allignement
