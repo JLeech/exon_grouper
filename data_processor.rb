@@ -3,6 +3,8 @@ require_relative "organism.rb"
 
 class DataProcessor
 
+	BLOSSUM_PATH = "./data/blosum_penalty_matrix"
+
 	attr_accessor :raw_data
 	attr_accessor :organisms
 
@@ -17,6 +19,26 @@ class DataProcessor
 			@organisms <<  parse_organism(row, index)
 		end
 		return @organisms
+	end
+
+	def self.parse_blossum
+		alphabet = []
+		tmp_array = []
+		blossum_matrix = Hash.new { |hash, key| hash[key] = Hash.new { |hash, key| hash[key] = 0 } }
+		File.readlines(BLOSSUM_PATH).each_with_index do |line, index|
+			next if [0,2].include?(index)
+			if index == 1
+				alphabet = line.strip.split(" ")
+				next
+			end
+
+			values_array = line.strip.split(" ")
+			alphabet.length.times { |pos| tmp_array += [alphabet[pos], values_array[pos].to_i] }
+			blossum_matrix[alphabet[index - 3]] = Hash[*tmp_array]
+			tmp_array = []
+
+		end
+		return blossum_matrix
 	end
 
 private

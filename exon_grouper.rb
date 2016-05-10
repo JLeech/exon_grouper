@@ -4,10 +4,9 @@ require "json"
 require_relative "exon.rb"
 require_relative "organism.rb"
 require_relative "data_processor"
+require_relative "exon_matcher.rb"
 
 class ExonGrouper
-
-	BLOSSUM_PATH = "./data/blosum_penalty_matrix"
 	
 	attr_accessor :path_to_file
 	attr_accessor :path_to_allignement
@@ -18,6 +17,7 @@ class ExonGrouper
 
 	attr_accessor :organisms
 	attr_accessor :max_group
+	attr_accessor :output_csv
 
 	def initialize(options = {})
 
@@ -25,8 +25,9 @@ class ExonGrouper
 		@path_to_allignement = options["allignement"]
 		@percent = options["percent"].to_i
 		@organism_number = options["organism_number"].to_i
+		@output_csv = options["output_filename"]
 
-		@blossum_matrix = parse_blossum
+		@blossum_matrix = DataProcessor.parse_blossum
 		@organisms = []
 	end
 
@@ -39,7 +40,7 @@ class ExonGrouper
 		exons = []
 		# создаются связи между экзонами (какие вложены в какие)
 		make_connections
-	  @organisms.each do |organism|	
+	  @organisms.each do |organism|
 	  	exons += organism.exons
 	  end
 	  #нумеруются группы вложенности
@@ -47,6 +48,10 @@ class ExonGrouper
 	end
 
 	def make_connections
+		CSV.open("#{output_csv}.csv", "w") do |csv|
+		  csv << ["pair_id","affine_score", "usual_score", "added_spaces", "matching_spaces", "matching_letters", "not_mathing_letters", "matching_coords", "aff/seq1_score", "aff/seq2_score", "length_coef", "match_letter_1", "match_letter_2"]
+		end
+ 
 		@organisms.each_with_index do |organism, index|
 			break if index+1 == @organisms.length-1
 			@organisms[(index+1)..-1].each do |match_organism|
@@ -55,17 +60,34 @@ class ExonGrouper
 					match_organism.exons.each_with_index do |match_exon, match_organism_index|
 						# проверяем вложен ли экзон, с учётом процента совпадения из options
 						if exon.include?(match_exon, @percent, blossum_matrix)
+							pair_id = (organism.name + organism_index.to_s + match_organism.name + match_organism_index.to_s).hash
 							puts "_________________________"
+							CSV.open("#{output_csv}.csv", "a") do |csv|
+								sequences = [exon.allignement, match_exon.allignement]
+								coords = [] << exon.get_coords << match_exon.get_coords
+								sequences_data = {pair_id: pair_id}
+								exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix)
+								exon_matcher.count_everything
+								exon_matcher.print_statistics
+								csv << exon_matcher.print_for_csv
+							end
+							
 							blos = exon.count_with_blossum(match_exon, blossum_matrix)
-							max_blos = exon.max_blossum(blossum_matrix)
+							#max_blos = exon.max_blossum(blossum_matrix)
 							puts "\n#{organism.name} : exon_number:[#{organism_index + 1}]"
 							puts "#{match_organism.name} : exon_number:[#{match_organism_index + 1}]"
 							puts "#{exon.start} : #{exon.finish}"
 							puts "#{match_exon.start} : #{match_exon.finish}"
-							puts "one to one : #{blos}"
-							puts "max for one: #{max_blos}"
-							puts "percents   : #{(blos/max_blos*100).round}%"
+							puts "pair_id: #{pair_id}"
+
+							# puts "one to one : #{blos}"
+							# puts "max for one: #{max_blos}"
+							# puts "percents   : #{(blos/max_blos*100).round}%"
 							puts "_________________________"
+							# org_name: organism.name,
+							# exon_number: organism_index + 1,
+							# match_org_name: match_organism.name,
+							# match_exon_number: match_organism_index + 1,
 							exon_includes = true
 							exon.connections << match_exon
 							match_exon.connections << exon
@@ -98,26 +120,6 @@ class ExonGrouper
 				set_groups_for_connected(connected_exon)
 			end
 		end
-	end
-
-	def parse_blossum
-		alphabet = []
-		tmp_array = []
-		blossum_matrix = Hash.new { |hash, key| hash[key] = Hash.new { |hash, key| hash[key] = 0 } }
-		File.readlines(BLOSSUM_PATH).each_with_index do |line, index|
-			next if [0,2].include?(index)
-			if index == 1
-				alphabet = line.strip.split(" ")
-				next
-			end
-
-			values_array = line.strip.split(" ")
-			alphabet.length.times { |pos| tmp_array += [alphabet[pos], values_array[pos].to_i] }
-			blossum_matrix[alphabet[index - 3]] = Hash[*tmp_array]
-			tmp_array = []
-
-		end
-		return blossum_matrix
 	end
 
 	def print_groups_coords

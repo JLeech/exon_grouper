@@ -5,14 +5,15 @@ class Exon
 	attr_accessor :connections
 	attr_accessor :group
 	attr_accessor :allignement
+	attr_accessor :click
 
 	def initialize(start, finish, allignement)
-		@start = start
-		@finish = finish
-		@allignement = allignement
-		@connections = []
-		@group = -1
-		@click = -1
+		self.start = start
+		self.finish = finish
+		self.allignement = allignement
+		self.connections = []
+		self.group = -1
+		self.click = -1
 	end
 
 	def include?(exon, match_persent, blossum)
@@ -29,6 +30,13 @@ class Exon
 		else
 			return false
 		end
+	end
+
+	def get_exons_matching_coords(exon)
+		first_range = (start..finish)
+		second_range = (exon.start..exon.finish)
+		match_length = ([first_range.begin, second_range.begin].max..[first_range.max, second_range.max].min).size
+		return match_length
 	end
 
 	def click_include(exon)
@@ -48,9 +56,11 @@ class Exon
 		# puts "#{exon.allignement}"
 		current_allignement = allignement
 		match_allignement = exon.allignement
+		puts "#{current_allignement}"
+		puts "#{match_allignement}"
 		# margin allignement
 		current_allignement, match_allignement = margin_allignemet(current_allignement, match_allignement, [start, finish], [exon.start, exon.finish], blossum)
-		# puts "xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+		puts "xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 		puts "#{current_allignement}"
 		puts "#{match_allignement}"
 		# puts "xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -67,7 +77,7 @@ class Exon
 				end
 			else
 				start_gap_flag = true
-				match_score += blossum[current_char][match_char].nil? ? -9 : blossum[current_char][match_char]
+				match_score += blossum[current_char][match_char].nil? ? 0 : blossum[current_char][match_char]
 			end
 
 		end
@@ -75,10 +85,16 @@ class Exon
 
 	end
 
+
+
+	def get_coords
+		return [start, finish]
+	end
+
 	def print
 		puts "-----------------"
-		puts "#{@start} - #{@finish}"
-		puts "#{@group}"
+		puts "#{self.start} - #{self.finish}"
+		puts "#{self.group}"
 		puts allignement
 		puts "-----------------"
 	end
