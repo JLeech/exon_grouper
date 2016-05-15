@@ -5,6 +5,7 @@ require_relative "exon.rb"
 require_relative "organism.rb"
 require_relative "data_processor"
 require_relative "exon_matcher.rb"
+require_relative "group_saver.rb"
 
 class ExonGrouper
     
@@ -127,6 +128,11 @@ class ExonGrouper
             file.write("</svg>")
         end
         #`inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
+    end
+
+    def print_groups_to_csv
+    	group_saver = GroupSaver.new(self.organisms, output_filename)
+    	group_saver.save_to_csv
     end
 
 

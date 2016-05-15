@@ -186,8 +186,8 @@ class ExonMatcher
         CSV.open("#{output_filename}.csv", "a") { |csv| csv << data}
     end
     
-    def self.clear_output_file(output_filiname)
-        File.write("#{output_filiname}.txt", '')
+    def self.clear_output_file(output_filename)
+        File.write("#{output_filename}.txt", '')
     end
 
     def self.csv_header(output_csv)
