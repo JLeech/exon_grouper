@@ -9,14 +9,20 @@ class ExonMatcher
     attr_accessor :coords_1
     attr_accessor :coords_2
 
+    attr_accessor :local_seq_1
+    attr_accessor :local_seq_2
+
     attr_accessor :sequences
     attr_accessor :coords
 
     attr_accessor :added_spaces
     attr_accessor :matching_spaces
     attr_accessor :matching_letters
-    attr_accessor :not_mathing_letters
+    attr_accessor :mismatching_letters
     
+    attr_accessor :deletions_1
+    attr_accessor :deletions_2
+
     attr_accessor :affine_score
     attr_accessor :usual_score
     attr_accessor :seq_1_score
@@ -34,21 +40,23 @@ class ExonMatcher
         self.added_spaces = 0
         self.matching_spaces = 0
         self.matching_letters = 0
-        self.not_mathing_letters = 0
+        self.mismatching_letters = 0
         self.affine_score = 0
         self.usual_score = 0
+
+        self.deletions_1 = 0
+        self.deletions_2 = 0
+
         self.sequence_data = sequence_data
     end
 
-    def count_everything
+    def count_everything(params = {})
         parse_seq
-        margin_allignements
+        margin_allignements if params[:alligned].nil?
         self.affine_score, self.usual_score = count_blosum
-
         self.seq_1_score, _ = count_blosum(self.seq_1, self.seq_1, false)
-
         self.seq_2_score, _ = count_blosum(self.seq_2, self.seq_2, false)
-
+        self.local_seq_1, self.local_seq_2 = get_local_allignement(self.seq_1, self.seq_2)
     end
 
     def parse_seq
@@ -73,167 +81,220 @@ class ExonMatcher
     def margin_allignements
         start_diff = coords_1[0] - coords_2[0]
         if start_diff > 0
-            self.seq_1 = "-"*start_diff + self.seq_1
             self.added_spaces += start_diff
+            self.seq_1 = "-"*start_diff + self.seq_1
         else
-            self.seq_2 = "-"*(-start_diff) + self.seq_2
             self.added_spaces += (-start_diff)
+            self.seq_2 = "-"*(-start_diff) + self.seq_2
         end
         max_length = [self.seq_1.length, self.seq_2.length].max
         if self.seq_1.length < max_length
-            self.seq_1 = self.seq_1 + "-"*(max_length - self.seq_1.length)
             self.added_spaces += (max_length - self.seq_1.length)
+            self.seq_1 = self.seq_1 + "-"*(max_length - self.seq_1.length)
         end
         if self.seq_2.length < max_length
+            self.added_spaces += (max_length - self.seq_2.length)
             self.seq_2 = self.seq_2 + "-"*(max_length - self.seq_2.length)
-            self.added_spaces += (max_length - self.seq_1.length)
         end
     end
 
+    def get_local_allignement(sequence_1, sequence_2)
+        chars_1,chars_2 = delete_till_both_letters(sequence_1.split(""), sequence_2.split(""))
+        chars_1,chars_2 = delete_till_both_letters( chars_1.reverse, chars_2.reverse )
+        return [ chars_1.reverse.join, chars_2.reverse.join ]
+    end
+
     def count_blosum(main_allignement = self.seq_1, matching_allignement = self.seq_2, global = true)
-        affine_score_line = ""
-        seq_1_line = ""
-        seq_2_line = ""
+        current_affine_score = 0
+        current_matching_spaces = 0
+        current_deletion_1 = 0
+        current_deletion_2 = 0
+        current_usual_score = 0
+        current_matching_letters = 0 
+        current_mismatching_letters = 0
+
         start_gap_flag = true
         main_allignement.split("").each_with_index do |seq_1_char, position|
             seq_2_char = matching_allignement[position]
             if seq_1_char == "-" || seq_2_char == "-"
+                start_gap_flag = false
                 if seq_1_char == "-" && seq_2_char == "-"
-                    self.matching_spaces += 1 if global
-                    start_gap_flag = false  
+                    current_matching_spaces += 1
+                    
                 else
-                    self.affine_score += start_gap_flag ? -9 : -2
-                    start_gap_flag = false
-                    self.usual_score += -9
+                    current_deletion_1 += 1 if seq_1_char == "-"
+                    current_deletion_2 += 1 if seq_2_char == "-"
+                    current_affine_score += start_gap_flag ? -9 : -2
+                    current_usual_score += -9
                 end
             else
                 start_gap_flag = true
                 blosum_score = blosum[seq_1_char][matching_allignement[position]]
-                self.affine_score += blosum_score.nil? ? 0 : blosum_score
-                self.usual_score += blosum_score.nil? ? 0 : blosum_score
-                if global
-                    if seq_1_char == matching_allignement[position]
-                        self.matching_letters += 1
-                    else
-                        self.not_mathing_letters += 1
-                    end
+                current_affine_score += blosum_score.nil? ? 0 : blosum_score
+                current_usual_score += blosum_score.nil? ? 0 : blosum_score
+                if seq_1_char == matching_allignement[position]
+                    current_matching_letters += 1
+                else
+                    current_mismatching_letters += 1
                 end
             end
-            #affine_score_line += "#{affine_score.to_s}|"
-            #seq_1_line += " "*(affine_score.to_s.length-1) + seq_1_char + "|"
-            #seq_2_line += " "*(affine_score.to_s.length-1) + seq_2_char + "|"
         end
 
-        
-        #puts "_______________________"
-        # puts affine_score_line
-        # puts seq_1_line
-        # puts seq_2_line
-        return [affine_score, usual_score]
+        if global
+            self.matching_spaces = current_matching_spaces
+            self.deletions_1 = current_deletion_1
+            self.deletions_2 = current_deletion_2
+            self.matching_letters = current_matching_letters
+            self.mismatching_letters = current_mismatching_letters
+        end
+    
+        return [current_affine_score, current_usual_score]
     end
 
-    def print_statistics_for_txt(output_filename, aditional_data = {})
-        exon_1_length = self.exon_1.allignement.length
-        exon_2_length = self.exon_2.allignement.length
+    def print_statistics_for_txt(output_filename)
         output = ""
-        output += "_________________________\n"
-        output += "pair_id: #{sequence_data[:pair_id]}\n"
+        output += "#{self.sequence_data[:pair_id]}\n"
+        output += "\"#{self.seq_1}\"\n"
+        output += "\"#{self.seq_2}\"\n"
+        File.open("#{output_filename}_allignements.txt", 'a') { |file| file.write(output) }
 
-        output += "#{sequence_data[:org_name]} : exon_number:[#{sequence_data[:exon_index] + 1}]\n"
-        output += "#{sequence_data[:match_org_name]} : exon_number:[#{sequence_data[:match_exon_index] + 1}]\n"
-        output += "#{self.coords_1}\n"
-        output += "#{self.coords_2}\n"
-
-        output += self.seq_1 + "\n"
-        output += self.seq_2 + "\n"
-
-        output += "affine_score:         #{self.affine_score}\n"
-        output += "usual_score:      #{self.usual_score}\n"
-        output += "added_spaces:         #{self.added_spaces}\n"
-        output += "matching_spaces:  #{self.matching_spaces}\n"
-        output += "matching_letters:     #{self.matching_letters}\n"
-        output += "not_mathing_letters:  #{self.not_mathing_letters}\n"
-        output += "matching_coords:      #{self.exon_1.get_exons_matching_coords(self.exon_2)}\n"
-
-        output += "aff/seq1_score:   #{self.affine_score/seq_1_score.to_f}\n"
-        output += "aff/seq2_score:   #{self.affine_score/self.seq_2_score.to_f}\n"     
-
-        output += "length coef:  #{[exon_1_length,exon_2_length].min.to_f/[exon_1_length,exon_2_length].max}\n"
-        output += "match_letter_1 :  #{ self.matching_letters.to_f / exon_1_length } \n"
-        output += "match_letter_2 :  #{ self.matching_letters.to_f / exon_2_length } \n"
-        
-
-        output += "_________________________\n\n"
-        File.open("#{output_filename}.txt", 'a') { |file| file.write(output) }
+        output = ""
+        output += "#{self.sequence_data[:pair_id]}\n"
+        output += "\"#{self.local_seq_1}\"\n"
+        output += "\"#{self.local_seq_2}\"\n"
+        File.open("#{output_filename}_local_allignements.txt", 'a') { |file| file.write(output) }
     end
 
     def print_for_csv(output_filename)
         exon_1_length = self.exon_1.allignement.length
         exon_2_length = self.exon_2.allignement.length
+
+        local_leng_1 = get_no_gap_langth(local_seq_1)
+        local_leng_2 = get_no_gap_langth(local_seq_2)
+
+        local_aff_score = count_blosum(local_seq_1,local_seq_2,false)[0]
+        loc_seq_1_score = count_blosum(local_seq_1,local_seq_1,false)[0]
+        loc_seq_2_score = count_blosum(local_seq_2,local_seq_2,false)[0]
+        aff_loc_seq_1_score = (local_aff_score/loc_seq_1_score.to_f).round(2)
+        aff_loc_seq_2_score = (local_aff_score/loc_seq_2_score.to_f).round(2)
+        if "#{aff_loc_seq_1_score}" == "NaN"
+          loc_seq_1_score = -999999
+          loc_seq_2_score = -999999
+          aff_loc_seq_1_score = -999999
+          aff_loc_seq_2_score = -999999
+        end
         data = [self.sequence_data[:pair_id],
+                self.sequence_data[:org_name],
+                self.sequence_data[:exon_index] + 1,
+                self.coords_1[0],
+                self.coords_1[1],
+                self.coords_1.reverse.inject(:-),
+                self.seq_1_score.to_f.round(2),
+                self.sequence_data[:match_org_name],
+                self.sequence_data[:match_exon_index] + 1,
+                self.coords_2[0],
+                self.coords_2[1],
+                self.coords_2.reverse.inject(:-),
+                self.seq_2_score.to_f.round(2),
                 self.affine_score,
                 self.usual_score,
                 self.added_spaces,
                 self.matching_spaces,
                 self.matching_letters,
-                self.not_mathing_letters,
-                self.exon_1.get_exons_matching_coords(self.exon_2),
-                self.affine_score/seq_1_score.to_f,
-                self.affine_score/self.seq_2_score.to_f,
-                [exon_1_length,exon_2_length].min.to_f/[exon_1_length,exon_2_length].max,
-                self.matching_letters / exon_1_length.to_f,
-                self.matching_letters / exon_2_length.to_f]
+                self.mismatching_letters,
+                self.deletions_1,
+                self.deletions_2,
+                self.exon_1.get_exons_matching_coords(self.exon_2)-1,
+                (self.affine_score/self.seq_1_score.to_f).round(2),
+                (self.affine_score/self.seq_2_score.to_f).round(2),
+                [self.affine_score/self.seq_1_score.to_f,self.affine_score/self.seq_2_score.to_f].min.round(2),
+                ([exon_1_length,exon_2_length].min/[exon_1_length,exon_2_length].max.to_f).round(2),
+                (self.matching_letters / exon_1_length.to_f).round(2),
+                (self.matching_letters / exon_2_length.to_f).round(2),
+                "",
+                "",
+                self.local_seq_1.length,
+                local_leng_1,
+                local_leng_2,
+                ([local_leng_1,local_leng_2].min/[local_leng_1,local_leng_2].max.to_f).round(2),                
+                local_aff_score,
+                loc_seq_1_score,
+                loc_seq_2_score,
+                aff_loc_seq_1_score,
+                aff_loc_seq_2_score,
+                [aff_loc_seq_1_score, aff_loc_seq_2_score].min
+            ]
         CSV.open("#{output_filename}.csv", "a") { |csv| csv << data}
     end
-    
+
     def self.clear_output_file(output_filename)
-        File.write("#{output_filename}.txt", '')
+        File.write("#{output_filename}_allignements.txt", '')
+        File.write("#{output_filename}_local_allignements.txt", '')
     end
 
     def self.csv_header(output_csv)
         CSV.open("#{output_csv}.csv", "w") do |csv|
           csv << ["pair_id",
-                  "affine_score", 
-                  "usual_score", 
-                  "added_spaces", 
-                  "matching_spaces", 
-                  "matching_letters", 
-                  "not_mathing_letters", 
-                  "matching_coords", 
-                  "aff/seq1_score", 
-                  "aff/seq2_score", 
-                  "length_coef", 
-                  "match_letter_1", 
-                  "match_letter_2"]
+                  "Spec1",
+                  "Ex1",
+                  "Start1",
+                  "End1",
+                  "Leng1",
+                  "Ex1_Sc",
+                  "Spec2",
+                  "Ex2",
+                  "Start2",
+                  "End2",
+                  "Leng2",
+                  "Ex2_Sc",
+                  "Aff_sc",
+                  "Mono_sc",
+                  "Add_sp",
+                  "Match_sp",
+                  "Match",
+                  "MisM",
+                  "Del1",
+                  "Del2",
+                  "Inters",
+                  "Aff_Seq1",
+                  "Aff_Seq2",
+                  "Min_aff_seq_score",
+                  "Leng_Min_Max",
+                  "Per_id1",
+                  "Per_id2",
+                  "Align1",
+                  "Align2",
+                  "Leng_Al",
+                  "Local_leng_1",
+                  "Local_leng_2",
+                  "Local_leng_ratio",
+                  "Local_aff_score",
+                  "Loc_seq_1_score",
+                  "Loc_seq_2_score",
+                  "Aff_loc_seq_1_score",
+                  "Aff_loc_seq_2_score",
+                  "min_Aff_loc_score"
+                ]
         end
     end
-        
 
-    def print_allignements
-        puts "#{seq_1}"
-        puts "#{seq_2}"
-        puts "_______________________"
+private
+
+    def get_no_gap_langth(string)
+      return string.gsub("-","").length
     end
 
-    def print_coords
-        puts "seq_1 coords: #{coords_1}"
-        puts "seq_2 coords: #{coords_2}"
-        puts "_______________________"
+    def delete_till_both_letters(chars_1, chars_2)
+        while true
+            if chars_1.last == "-" || chars_2.last == "-"
+                chars_1.pop
+                chars_2.pop
+            else
+                break
+            end
+            break if chars_1.empty? || chars_2.empty?
+        end
+        return [chars_1, chars_2]
     end
 
 end
-
-
-
-
-# exon_matcher = ExonMatcher.new
-# exon_matcher.count_everything
-
-#exon_matcher.print_coords
-#exon_matcher.print_allignements
-#exon_matcher.margin_allignements
-#exon_matcher.print_allignements
-
-#exon_matcher.count_blosum_and_print
-#exon_matcher.print_statistics
-

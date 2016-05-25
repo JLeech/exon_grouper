@@ -1,11 +1,17 @@
+require "securerandom"
 class Exon
 
 	attr_accessor :start
 	attr_accessor :finish
+	attr_accessor :allignement
+
 	attr_accessor :connections
 	attr_accessor :group
-	attr_accessor :allignement
-	attr_accessor :click
+	attr_accessor :cliques
+
+	attr_accessor :organism
+
+	attr_accessor :uuid
 
 	def initialize(start, finish, allignement)
 		self.start = start
@@ -13,7 +19,8 @@ class Exon
 		self.allignement = allignement
 		self.connections = []
 		self.group = -1
-		self.click = -1
+		self.uuid = SecureRandom.hex(10)
+		self.cliques = []
 	end
 
 	def include?(exon, match_persent, blossum)
@@ -25,7 +32,7 @@ class Exon
 		second_range = (exon.start..exon.finish)
 		match_length = ([first_range.begin, second_range.begin].max..[first_range.max, second_range.max].min).size
 		if match_length >= [first_range.size, second_range.size].min * match_persent / 100.0
-			return false if [first_range.size, second_range.size].max > 3*[first_range.size, second_range.size].min
+			#return false if [first_range.size, second_range.size].max > 3*[first_range.size, second_range.size].min			
 			return true
 		else
 			return false

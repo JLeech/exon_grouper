@@ -63,6 +63,8 @@ exon_grouper.group
 if options["output"] == "csv"	
 	#exon_grouper.print_group_count_as_csv
 end
-exon_grouper.draw_as_svg_rectangels
+
 exon_grouper.print_groups_to_csv
+exon_grouper.make_cliques
+exon_grouper.draw_as_svg_rectangels
 #exon_grouper.print_groups_coords

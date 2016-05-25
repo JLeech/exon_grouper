@@ -6,6 +6,7 @@ require_relative "organism.rb"
 require_relative "data_processor"
 require_relative "exon_matcher.rb"
 require_relative "group_saver.rb"
+require_relative "clique_finder.rb"
 
 class ExonGrouper
     
@@ -22,64 +23,69 @@ class ExonGrouper
 
     def initialize(options = {})
 
-        @path_to_file = options["file"]
-        @path_to_allignement = options["allignement"]
-        @percent = options["percent"].to_i
-        @organism_number = options["organism_number"].to_i
-        @output_filename = options["output_filename"]
+        self.path_to_file = options["file"]
+        self.path_to_allignement = options["allignement"]
+        self.percent = options["percent"].to_i
+        self.organism_number = options["organism_number"].to_i
+        self.output_filename = options["output_filename"]
 
-        @blossum_matrix = DataProcessor.parse_blossum
-        @organisms = []
+        self.blossum_matrix = DataProcessor.parse_blossum
+        self.organisms = []
     end
 
     def prepare_data
-        # отбираются только первые @organism_number организмов
-        @organisms = DataProcessor.new(@path_to_file, @path_to_allignement).prepare[0..(@organism_number)]
+        # отбираются только первые self.organism_number организмов
+        self.organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare[0..(self.organism_number)]
     end
 
     def group
         exons = []
         # создаются связи между экзонами (какие вложены в какие)
         make_connections
-        @organisms.each do |organism|
+        self.organisms.each do |organism|
             exons += organism.exons
         end
         #нумеруются группы вложенности
         make_groups(exons)
     end
 
-    def make_connections
+    def make_cliques
+        clique_finder = CliqueFinder.new(self.organisms)
+        clique_finder.find_cliques
 
-    	ExonMatcher.csv_header(output_filename)
-    	ExonMatcher.clear_output_file(output_filename)
- 
-      @organisms.each_with_index do |organism, index|
-        break if index+1 == @organisms.length-1
-        @organisms[(index+1)..-1].each do |match_organism|
+    end
+
+    def make_connections
+      ExonMatcher.csv_header(output_filename)
+      ExonMatcher.clear_output_file(output_filename)
+      pair_counter = 0
+      self.organisms.each_with_index do |organism, index|
+        break if index+1 == self.organisms.length-1
+        self.organisms[(index+1)..-1].each do |match_organism|
           organism.exons.each_with_index do |exon, organism_index|
             exon_includes = false # флаг того, вложен ли экзон в кого-то
             match_organism.exons.each_with_index do |match_exon, match_organism_index|
               # проверяем вложен ли экзон, с учётом процента совпадения из options
-              if exon.include?(match_exon, @percent, blossum_matrix)
-                pair_id = (organism.name + organism_index.to_s + match_organism.name + match_organism_index.to_s).hash
-                
+              if exon.include?(match_exon, self.percent, blossum_matrix)
                 sequences = [exon.allignement, match_exon.allignement]
                 coords = [] << exon.get_coords << match_exon.get_coords
-                sequences_data = {pair_id: pair_id,
-                									org_name: organism.name,
-                									exon_index: organism_index,
-                									match_org_name: match_organism.name,
-                									match_exon_index: match_organism_index,
-                									}
+                sequences_data = {pair_id: get_pair_id(pair_counter),
+                                  org_name: organism.name,
+                                  exon_index: organism_index,
+                                  match_org_name: match_organism.name,
+                                  match_exon_index: match_organism_index,
+                                  }
                 exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix)
                 exon_matcher.count_everything
                 additional_data = {}
                 exon_matcher.print_for_csv(output_filename)
                 exon_matcher.print_statistics_for_txt(output_filename)
-
+                
                 exon_includes = true
                 exon.connections << match_exon
                 match_exon.connections << exon
+
+                pair_counter += 1
               elsif exon_includes
                 break
               end
@@ -99,7 +105,7 @@ class ExonGrouper
                 set_groups_for_connected(exon)
             end
         end
-        @max_group = group  
+        self.max_group = group  
     end
 
     def set_groups_for_connected(exon)
@@ -112,13 +118,13 @@ class ExonGrouper
     end
 
     def draw_as_svg_rectangels
-        svg_width = @organisms.first.allignement_length*2 + 200
-        svg_height = @organisms.count * 40 + 40
+        svg_width = self.organisms.first.allignement_length*2 + 200
+        svg_height = self.organisms.count * 40 + 40
         output_file_name = path_to_allignement.split('/').last.split("_").first
         File.open("#{output_file_name}.svg", 'w') do |file|
             file.write("<svg width=\"#{svg_width+100}\" height=\"#{svg_height}\">")
             file.write("<rect x=\"0\" y=\"0\" width=\"#{svg_width+100}\" height=\"#{svg_height}\" style=\"fill:white;\" />")
-            @organisms.each_with_index do |organism, index|
+            self.organisms.each_with_index do |organism, index|
                 draw_organism_line(index, svg_width, file)
                 print_organism_name(organism, index, file)
                 organism.exons.each do |exon|
@@ -127,17 +133,21 @@ class ExonGrouper
             end
             file.write("</svg>")
         end
-        #`inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
+        `inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
     end
 
     def print_groups_to_csv
-    	group_saver = GroupSaver.new(self.organisms, output_filename)
-    	group_saver.save_to_csv
+        group_saver = GroupSaver.new(self.organisms, output_filename)
+        group_saver.save_to_csv
     end
 
 
 private
     
+    def get_pair_id(number)
+      return "A"+"0"*(5-number.to_s.length) + number.to_s
+    end
+
     def print_organism_name(organism, index, file)
         y_coords = 40*(index+1) - 10
         file.write("<text x=\"10\" y=\"#{y_coords}\" fill=\"black\" font-size=\"20px\">#{organism.name}</text>")
