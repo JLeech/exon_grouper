@@ -285,7 +285,15 @@ class ExonMatcher
                   # "Aff_loc_seq_2_score",
                   # "min_Aff_loc_score"
                 ]
-            header += self.local_data.keys
+            header += [ "start_position_1",
+                        "start_position_2",
+                        "end_position_1",
+                        "end_position_2",
+                        "score_1",
+                        "score_2",
+                        "local_length_coef",
+                        "local_score_1_coef",
+                        "local_score_2_coef"]
             csv << header
         end
     end

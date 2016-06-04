@@ -81,11 +81,6 @@ class ExonGrouper
                 additional_data = {}
                 exon_matcher.print_for_csv(output_filename)
                 exon_matcher.print_statistics_for_txt(output_filename)
-                if exon_matcher.local_score > 0.6
-                    exon_includes = true
-                    exon.connections << match_exon
-                    match_exon.connections << exon
-                end
                 pair_counter += 1
               elsif exon_includes
                 break

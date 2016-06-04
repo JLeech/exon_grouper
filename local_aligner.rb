@@ -33,15 +33,16 @@ class LocalAligner
 	BLOSUM_PATH = "./data/blosum_penalty_matrix"
 
 	def initialize(seq_1 = "", seq_2 = "", blosum = {})
-		self.seq_1 = seq_1
-		self.seq_2 = seq_2
-		self.blosum = LocalAligner.parse_blosum if blosum.empty?
+		self.seq_1 = seq_1.gsub("-","")
+		self.seq_2 = seq_2.gsub("-","")
+		self.blosum = blosum.empty? ? LocalAligner.parse_blosum : blosum
+
 	end
 
 	def align
 		alignement_matrix = Matrix.zero(self.seq_1.length+1,self.seq_2.length+1)
 		alignement_matrix, back_ways = fill_matrix(alignement_matrix)
-		return make_back_way(alignement_matrix, back_ways)
+		return format_results( make_back_way(alignement_matrix, back_ways))
 	end
 
 	def fill_matrix(matrix)
@@ -49,7 +50,12 @@ class LocalAligner
 		ways = [[-1,-1],[0,-1],[-1,0],[0,0]]
 		for i in 1..(matrix.row_count-1)
 			for j in 1..(matrix.column_count-1)
-				diagonal = matrix[i-1,j-1]+blosum[seq_1[i-1]][seq_2[j-1]]
+				blosum_value = blosum[seq_1[i-1]][seq_2[j-1]]
+				if blosum_value.nil?
+					diagonal = matrix[i-1,j-1]	
+				else
+					diagonal = matrix[i-1,j-1]+blosum_value
+				end
 				left = matrix[i,j-1]+blosum["A"]["-"]
 				top = matrix[i-1,j]+blosum["A"]["-"]
 				max = [diagonal, left, top, 0].max
@@ -83,10 +89,41 @@ class LocalAligner
 		return results
 	end
 
+	def format_results(results)
+		start_position_1 = results["start_positions"][0]
+		start_position_2 = results["start_positions"][1]
+		end_position_1 = results["end_positions"][0]
+		end_position_2 = results["end_positions"][1]
+		length_1 = end_position_1 - start_position_1
+		length_2 = end_position_2 - start_position_2
+		score_1 = count_score(results["align_1"],results["align_1"])
+		score_2 = count_score(results["align_2"],results["align_2"])
+		local_length_coef = ([length_1,length_2].min.to_f)/([length_1,length_2].max.to_f)
+		local_score_1_coef = score_1.to_f/results["score"]
+		local_score_2_coef = score_2.to_f/results["score"]
+		formatted_result = {
+			"start_position_1" => start_position_1,
+			"start_position_2" => start_position_2,
+			"end_position_1" => end_position_1,
+			"end_position_2" => end_position_2,
+			"score_1" => score_1,
+			"score_2" => score_2,
+			"local_length_coef" => local_length_coef,
+			"local_score_1_coef" => local_score_1_coef,
+			"local_score_2_coef" => local_score_2_coef,
+			"align_1" => results["align_1"],
+			"align_2" => results["align_2"]
+		}
+		return formatted_result
+	end
+
 	def count_score(str_1, str_2)
 		result = 0
 		str_1.chars.each_with_index do |char, index|
-			result += self.blosum[char][str_2[index]]
+			blosum_value = self.blosum[char][str_2[index]]
+			unless blosum_value.nil?
+				result += self.blosum[char][str_2[index]]	
+			end
 		end
 		return result
 	end
@@ -122,12 +159,12 @@ class LocalAligner
 
 end
 
-seq_1 = "PPDGAPQDVQLEAISSQGIKVTWK"
-seq_2 = "SPDGPPQEVQLEALSSQSVKVTWK"
+# seq_1 = "PPDGAPQDVQLEAISSQGIKVTWK"
+# seq_2 = "SPDGPPQEVQLEALSSQSVKVTWK"
 
-la = LocalAligner.new(seq_1, seq_2)
-puts seq_1.length
-puts la.align
-#x = Matrix[[1, 10, 5], [3, 4,0]]
-#puts "#{x.get_max_position}"
+# la = LocalAligner.new(seq_1, seq_2)
+# puts seq_1.length
+# puts la.align
+# #x = Matrix[[1, 10, 5], [3, 4,0]]
+# #puts "#{x.get_max_position}"
 
