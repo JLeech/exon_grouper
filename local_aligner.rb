@@ -70,7 +70,7 @@ class LocalAligner
 		max_position = matrix.get_max_position
 		aligned_1 = ""
 		aligned_2 = ""
-		start_positions = [max_position,[-1,-1]].transpose.map {|x| x.reduce(:+)}
+		end_positions = [max_position[0]-1,max_position[1]-1]
 		while true
 			break if matrix[max_position[0],max_position[1]] == 0
 			current_way = ways[max_position.join('_')]
@@ -78,7 +78,7 @@ class LocalAligner
 			aligned_2 += self.seq_2[max_position[1]-1] == 0 ? "-" : self.seq_2[max_position[1]-1]
 			max_position = [max_position,current_way].transpose.map {|x| x.reduce(:+)}
 		end
-		end_positions = max_position
+		start_positions = max_position
 		results = { 
 			"start_positions" => start_positions,
 			"end_positions" => end_positions,
@@ -99,13 +99,14 @@ class LocalAligner
 		score_1 = count_score(results["align_1"],results["align_1"])
 		score_2 = count_score(results["align_2"],results["align_2"])
 		local_length_coef = ([length_1,length_2].min.to_f)/([length_1,length_2].max.to_f)
-		local_score_1_coef = score_1.to_f/results["score"]
-		local_score_2_coef = score_2.to_f/results["score"]
+		local_score_1_coef = results["score"]/score_1.to_f
+		local_score_2_coef = results["score"]/score_2.to_f
 		formatted_result = {
 			"start_position_1" => start_position_1,
-			"start_position_2" => start_position_2,
 			"end_position_1" => end_position_1,
+			"start_position_2" => start_position_2,
 			"end_position_2" => end_position_2,
+			"local_score" => results["score"],
 			"score_1" => score_1,
 			"score_2" => score_2,
 			"local_length_coef" => local_length_coef,
@@ -159,12 +160,7 @@ class LocalAligner
 
 end
 
-# seq_1 = "PPDGAPQDVQLEAISSQGIKVTWK"
-# seq_2 = "SPDGPPQEVQLEALSSQSVKVTWK"
-
-# la = LocalAligner.new(seq_1, seq_2)
-# puts seq_1.length
-# puts la.align
-# #x = Matrix[[1, 10, 5], [3, 4,0]]
-# #puts "#{x.get_max_position}"
-
+ # seq_1 = "PPDGAPQDVQLEAISSQGIKVTWK"
+ # seq_2 = "SPDGPPQEVQLEALSSQSVKVTWK"
+ # la = LocalAligner.new(seq_1, seq_2)
+ # puts la.align
