@@ -42,6 +42,7 @@ class ExonGrouper
         exons = []
         # создаются связи между экзонами (какие вложены в какие)
         make_connections
+        reallocate_connections
         self.organisms.each do |organism|
             exons += organism.exons
         end
@@ -80,11 +81,11 @@ class ExonGrouper
                 additional_data = {}
                 exon_matcher.print_for_csv(output_filename)
                 exon_matcher.print_statistics_for_txt(output_filename)
-                
-                exon_includes = true
-                exon.connections << match_exon
-                match_exon.connections << exon
-
+                if exon_matcher.local_score > 0.6
+                    exon_includes = true
+                    exon.connections << match_exon
+                    match_exon.connections << exon
+                end
                 pair_counter += 1
               elsif exon_includes
                 break
@@ -141,6 +142,16 @@ class ExonGrouper
         group_saver.save_to_csv
     end
 
+    def reallocate_connections
+      self.organisms.each do |organism|
+        organism.exons.each do |exon|
+          next if exon.connections.empty?
+          first_connected_exon = exon.connections[0]
+          exon.connections = exon.connections.delete_if { |conn| conn.organism_index == first_connected_exon.organism_index }
+          first_connected_exon.connections = first_connected_exon.connections.delete_if { |conn| conn.organism_index == exon.organism_index }
+        end
+      end
+    end
 
 private
     
@@ -166,7 +177,7 @@ private
         width = exon.finish - exon.start
         file.write("<rect x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords-15}\" width=\"#{width*2}\" height=\"30\" style=\"fill:rgb(204,255,51);stroke:black;stroke-width:1\" />\n")
         #file.write("<text x=\"#{(exon.start+x_start_coords)*2+10}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.start}:#{exon.finish})</text>")
-        file.write("<text x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.group})</text>")
+        file.write("<text x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.cliques})</text>")
     end
 
 end

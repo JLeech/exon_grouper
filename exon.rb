@@ -9,11 +9,11 @@ class Exon
 	attr_accessor :group
 	attr_accessor :cliques
 
-	attr_accessor :organism
+	attr_accessor :organism_index
 
 	attr_accessor :uuid
 
-	def initialize(start, finish, allignement)
+	def initialize(start, finish, allignement, organism_index = 1)
 		self.start = start
 		self.finish = finish
 		self.allignement = allignement
@@ -21,6 +21,7 @@ class Exon
 		self.group = -1
 		self.uuid = SecureRandom.hex(10)
 		self.cliques = []
+		self.organism_index = organism_index
 	end
 
 	def include?(exon, match_persent, blossum)
