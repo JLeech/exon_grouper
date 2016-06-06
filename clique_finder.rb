@@ -7,15 +7,16 @@ class CliqueFinder
 	attr_accessor :organisms
 	attr_accessor :cliques
 
-	def initialize(organisms)
+	def initialize(organisms, file_path = "")
 		self.organisms = organisms
 		self.cliques = []
 	end
 
 	def find_cliques
 		clique_number = 0
+		clique_data = "organism_name, exon_index,cliques\n"
 		self.organisms.each do |organism|
-			organism.exons.each do |exon|
+			organism.exons.each_with_index do |exon, exon_index|
 				next if !exon.cliques.empty?
 				exon_uids = get_exon_uids_for_clique(exon)
 				exons_in_clique = mark_exons_in_clique( exon, exon_uids, clique_number )
@@ -23,6 +24,12 @@ class CliqueFinder
 				clique_number += 1
 			end
 		end
+		self.organisms.each do |organism|
+			organism.exons.each_with_index do |exon, exon_index|
+				clique_data += "#{organism.name},#{exon_index+1},#{exon.cliques.join(' ')}\n"
+			end
+		end
+		File.open("cliques.txt", "w") { |file| file.write(clique_data) }
 	end
 
 private
