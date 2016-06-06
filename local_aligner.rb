@@ -36,7 +36,6 @@ class LocalAligner
 		self.seq_1 = seq_1.gsub("-","")
 		self.seq_2 = seq_2.gsub("-","")
 		self.blosum = blosum.empty? ? LocalAligner.parse_blosum : blosum
-
 	end
 
 	def align
@@ -74,8 +73,8 @@ class LocalAligner
 		while true
 			break if matrix[max_position[0],max_position[1]] == 0
 			current_way = ways[max_position.join('_')]
-			aligned_1 += self.seq_1[max_position[0]-1] == 0 ? "-" : self.seq_1[max_position[0]-1]
-			aligned_2 += self.seq_2[max_position[1]-1] == 0 ? "-" : self.seq_2[max_position[1]-1]
+			aligned_1 += current_way[0] == 0 ? "-" : self.seq_1[max_position[0]-1]
+			aligned_2 += current_way[1] == 0 ? "-" : self.seq_2[max_position[1]-1]
 			max_position = [max_position,current_way].transpose.map {|x| x.reduce(:+)}
 		end
 		start_positions = max_position
@@ -94,8 +93,8 @@ class LocalAligner
 		start_position_2 = results["start_positions"][1]
 		end_position_1 = results["end_positions"][0]
 		end_position_2 = results["end_positions"][1]
-		length_1 = end_position_1 - start_position_1
-		length_2 = end_position_2 - start_position_2
+		length_1 = end_position_1 - start_position_1+1 
+		length_2 = end_position_2 - start_position_2+1
 		score_1 = count_score(results["align_1"],results["align_1"])
 		score_2 = count_score(results["align_2"],results["align_2"])
 		local_length_coef = ([length_1,length_2].min.to_f)/([length_1,length_2].max.to_f)
@@ -111,7 +110,10 @@ class LocalAligner
 			"local_score" => results["score"],
 			"local_score_1" => score_1,
 			"local_score_2" => score_2,
+			"local_score_coef" => results["score"].to_f/[score_1,score_2].max,
 			"local_length_coef" => local_length_coef,
+			"local_length_1_coef" => length_1.to_f/self.seq_1.length,
+			"local_length_2_coef" => length_2.to_f/self.seq_2.length,
 			"local_score_1_coef" => local_score_1_coef,
 			"local_score_2_coef" => local_score_2_coef,
 			"align_1" => results["align_1"],
