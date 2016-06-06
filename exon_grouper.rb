@@ -35,14 +35,14 @@ class ExonGrouper
 
     def prepare_data
         # отбираются только первые self.organism_number организмов
-        self.organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare[0..(self.organism_number)]
+        self.organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare[0..(self.organism_number-1)]
     end
 
     def group
         exons = []
         # создаются связи между экзонами (какие вложены в какие)
         make_connections
-        reallocate_connections
+        # reallocate_connections
         self.organisms.each do |organism|
             exons += organism.exons
         end
@@ -61,7 +61,7 @@ class ExonGrouper
       ExonMatcher.clear_output_file(output_filename)
       pair_counter = 0
       self.organisms.each_with_index do |organism, index|
-        break if index+1 == self.organisms.length-1
+        break if index+1 == self.organisms.length
         self.organisms[(index+1)..-1].each do |match_organism|
           organism.exons.each_with_index do |exon, organism_index|
             exon_includes = false # флаг того, вложен ли экзон в кого-то
@@ -78,7 +78,14 @@ class ExonGrouper
                                   }
                 exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix)
                 exon_matcher.count_everything
-                additional_data = {}
+                aff_score = exon_matcher.affine_score
+                rloc_1 = exon_matcher.local_data["local_score"].to_f/exon_matcher.seq_1_score.to_f
+                rloc_2 = exon_matcher.local_data["local_score"].to_f/exon_matcher.seq_2_score.to_f
+                if ([rloc_1,rloc_2].max > 0.2)
+                    exon_includes = true
+                    exon.connections << match_exon
+                    match_exon.connections << exon
+                end
                 exon_matcher.print_for_csv(output_filename)
                 exon_matcher.print_statistics_for_txt(output_filename)
                 pair_counter += 1

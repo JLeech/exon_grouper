@@ -50,7 +50,7 @@ end
 
 options = read_options
 
-exit unless check_options(options)
+#exit unless check_options(options)
 
 exon_grouper = ExonGrouper.new(options)
 # создание генов и заполнение их экзонами
@@ -60,11 +60,11 @@ exon_grouper.group
 #exon_grouper.print_groups_coords
 #exon_grouper.print_groups
 #exon_grouper.print_group_count
-if options["output"] == "csv"	
+#if options["output"] == "csv"	
 	#exon_grouper.print_group_count_as_csv
-end
+#end
 
-exon_grouper.print_groups_to_csv
+#exon_grouper.print_groups_to_csv
 exon_grouper.make_cliques
 exon_grouper.draw_as_svg_rectangels
 #exon_grouper.print_groups_coords

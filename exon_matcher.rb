@@ -195,6 +195,14 @@ class ExonMatcher
                 (self.affine_score/[self.seq_2_score,self.seq_1_score].max.to_f).round(2)
             ]
         data += self.local_data.values
+        rloc_1 = self.local_data["local_score"].to_f/self.seq_1_score.to_f
+        rloc_2 = self.local_data["local_score"].to_f/self.seq_2_score.to_f
+        data += [
+            rloc_1,
+            rloc_2,
+            [rloc_1,rloc_2].min,
+            [rloc_1,rloc_2].max
+        ]
         CSV.open("#{output_filename}.csv", "a") { |csv| csv << data}
     end
 
@@ -254,6 +262,14 @@ class ExonMatcher
                         "local_score_2_coef",
                         "align_1",
                         "align_2"]
+            combined_values = [
+                "local_min",
+                "RLoc_1",
+                "RLoc_2",
+                "Rmin",
+                "Rmax",
+            ]
+            header += combined_values
             csv << header
         end
     end

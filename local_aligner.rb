@@ -117,7 +117,8 @@ class LocalAligner
 			"local_score_1_coef" => local_score_1_coef,
 			"local_score_2_coef" => local_score_2_coef,
 			"align_1" => results["align_1"],
-			"align_2" => results["align_2"]
+			"align_2" => results["align_2"],
+			"local_min" => [local_score_1_coef,local_score_2_coef].min,
 		}
 		return formatted_result
 	end
