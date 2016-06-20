@@ -50,9 +50,9 @@ private
 		organism_name = parsed_coords_and_name.first.strip
 		organism_allignement = get_allignement_for_organism(organism_name)
 		# парсит csv и сохраняет экзоны в организмы
-		coordinates.each do |exon_coordinates|
+		coordinates.each_with_index do |exon_coordinates, exon_index|
 			exon_start, exon_finish = get_coords(exon_coordinates)
-			current_exons.push( Exon.new(exon_start, exon_finish, organism_allignement[exon_start..exon_finish], index) )
+			current_exons.push( Exon.new(exon_start, exon_finish, organism_allignement[exon_start..exon_finish], index, exon_index) )
 		end
 		organism = Organism.new(organism_name, current_exons, index, organism_allignement.length)
 		return organism

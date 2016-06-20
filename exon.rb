@@ -10,18 +10,21 @@ class Exon
 	attr_accessor :cliques
 
 	attr_accessor :organism_index
+	attr_accessor :exon_index
 
 	attr_accessor :uuid
 
-	def initialize(start, finish, allignement, organism_index = 1)
+	def initialize(start, finish, allignement, organism_index = 1, exon_index = 1)
 		self.start = start
 		self.finish = finish
 		self.allignement = allignement
 		self.connections = []
 		self.group = -1
-		self.uuid = SecureRandom.hex(10)
+		#self.uuid = SecureRandom.hex(10)
+		self.uuid = (organism_index+1)*100 + exon_index + 1
 		self.cliques = []
 		self.organism_index = organism_index
+		self.exon_index = exon_index
 	end
 
 	def include?(exon, match_persent, blossum)
@@ -69,7 +72,5 @@ class Exon
 		puts allignement
 		puts "-----------------"
 	end
-
-private
 
 end

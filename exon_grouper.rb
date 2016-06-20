@@ -51,9 +51,9 @@ class ExonGrouper
     end
 
     def make_cliques
-        clique_finder = CliqueFinder.new(self.organisms)
+        clique_finder = CliqueFinder.new(self.organisms, output_filename)
         clique_finder.find_cliques
-
+        clique_finder.print_cliques
     end
 
     def make_connections
@@ -63,7 +63,7 @@ class ExonGrouper
       self.organisms.each_with_index do |organism, index|
         break if index+1 == self.organisms.length
         self.organisms[(index+1)..-1].each do |match_organism|
-          organism.exons.each_with_index do |exon, organism_index|
+          organism.exons.each_with_index do |exon, organism_exon_index|
             exon_includes = false # флаг того, вложен ли экзон в кого-то
             match_organism.exons.each_with_index do |match_exon, match_organism_index|
               # проверяем вложен ли экзон, с учётом процента совпадения из options
@@ -72,9 +72,9 @@ class ExonGrouper
                 coords = [] << exon.get_coords << match_exon.get_coords
                 sequences_data = {pair_id: get_pair_id(pair_counter),
                                   org_name: organism.name,
-                                  exon_index: organism_index,
+                                  exon_index: exon.uuid,
                                   match_org_name: match_organism.name,
-                                  match_exon_index: match_organism_index,
+                                  match_exon_index: match_exon.uuid,
                                   }
                 exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix)
                 exon_matcher.count_everything
@@ -96,6 +96,7 @@ class ExonGrouper
           end
         end
       end
+      puts "pairs: #{pair_counter}"
     end
 
     def make_groups(exons)
@@ -136,6 +137,7 @@ class ExonGrouper
             end
             file.write("</svg>")
         end
+        puts "exon number : #{organisms.map{ |org| org.exons.length }.inject(:+)}"
         `inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
     end
 

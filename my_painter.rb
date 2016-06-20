@@ -51,12 +51,16 @@ end
 options = read_options
 
 #exit unless check_options(options)
-
+time1 = Time.now
 exon_grouper = ExonGrouper.new(options)
 # создание генов и заполнение их экзонами
 exon_grouper.prepare_data
+time2 = Time.now
+puts "Preparing data: #{time2 - time1}"
 # групировка на основе вложенности
 exon_grouper.group
+time3 = Time.now
+puts "Grouping: #{time3 - time1}"
 #exon_grouper.print_groups_coords
 #exon_grouper.print_groups
 #exon_grouper.print_group_count
@@ -66,5 +70,7 @@ exon_grouper.group
 
 #exon_grouper.print_groups_to_csv
 exon_grouper.make_cliques
+time4 = Time.now
+puts "Cliques: #{time4 - time1}"
 exon_grouper.draw_as_svg_rectangels
 #exon_grouper.print_groups_coords
