@@ -10,6 +10,9 @@ class ExonMatcher
     attr_accessor :coords_1
     attr_accessor :coords_2
 
+    attr_accessor :rloc_1
+    attr_accessor :rloc_2
+
     attr_accessor :local_data
 
     attr_accessor :sequences
@@ -57,6 +60,8 @@ class ExonMatcher
         self.seq_1_score, _ = count_blosum(self.seq_1, self.seq_1, false)
         self.seq_2_score, _ = count_blosum(self.seq_2, self.seq_2, false)
         self.local_data = LocalAligner.new(self.seq_1, self.seq_2, self.blosum).align
+        self.rloc_1 = self.local_data["local_score"].to_f/self.seq_1_score.to_f
+        self.rloc_2 = self.local_data["local_score"].to_f/self.seq_2_score.to_f
     end
 
     def parse_seq
@@ -164,13 +169,13 @@ class ExonMatcher
         exon_2_length = self.exon_2.allignement.gsub("-","").length
         data = [self.sequence_data[:pair_id],
                 self.sequence_data[:org_name],
-                self.sequence_data[:exon_index] + 1,
+                self.sequence_data[:exon_index],
                 self.coords_1[0],
                 self.coords_1[1],
                 self.coords_1.reverse.inject(:-),
                 self.seq_1_score.to_f.round(2),
                 self.sequence_data[:match_org_name],
-                self.sequence_data[:match_exon_index] + 1,
+                self.sequence_data[:match_exon_index],
                 self.coords_2[0],
                 self.coords_2[1],
                 self.coords_2.reverse.inject(:-),
@@ -195,13 +200,11 @@ class ExonMatcher
                 (self.affine_score/[self.seq_2_score,self.seq_1_score].max.to_f).round(2)
             ]
         data += self.local_data.values
-        rloc_1 = self.local_data["local_score"].to_f/self.seq_1_score.to_f
-        rloc_2 = self.local_data["local_score"].to_f/self.seq_2_score.to_f
         data += [
-            rloc_1,
-            rloc_2,
-            [rloc_1,rloc_2].min,
-            [rloc_1,rloc_2].max
+            self.rloc_1,
+            self.rloc_2,
+            [self.rloc_1,self.rloc_2].min,
+            [self.rloc_1,self.rloc_2].max
         ]
         CSV.open("#{output_filename}.csv", "a") { |csv| csv << data}
     end

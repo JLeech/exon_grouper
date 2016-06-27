@@ -6,6 +6,7 @@ class Exon
 	attr_accessor :allignement
 
 	attr_accessor :connections
+	attr_accessor :real_connections
 	attr_accessor :group
 	attr_accessor :cliques
 
@@ -19,6 +20,7 @@ class Exon
 		self.finish = finish
 		self.allignement = allignement
 		self.connections = []
+		self.real_connections = []
 		self.group = -1
 		#self.uuid = SecureRandom.hex(10)
 		self.uuid = (organism_index+1)*100 + exon_index + 1
@@ -43,6 +45,10 @@ class Exon
 		end
 	end
 
+	def connected_organisms
+		self.connections.map(&:organism_index)
+	end
+
 	def get_exons_matching_coords(exon)
 		first_range = (start..finish)
 		second_range = (exon.start..exon.finish)
@@ -53,6 +59,12 @@ class Exon
 	def click_include(exon)
 		return true if start == exon.start && finish == exon.finish
 		return false
+	end
+
+	def collect_cliques
+		if connections.empty? && !real_connections.empty?
+			self.cliques = real_connections.map(&:cliques).flatten.uniq
+		end
 	end
 
 	def max_blossum(blossum)

@@ -15,36 +15,30 @@ class CliqueFinder
 	end
 
 	def find_cliques
-
+		time_start = Time.now
+		puts "clique finder"
 		graph = construct_graph
+		graph_constructed = Time.now
+		puts "graph constructed #{graph_constructed - time_start}"
 		self.cliques = kerbosh([], graph.keys, [], graph)
+		cliques_found = Time.now
+		puts "cliques found #{cliques_found - graph_constructed}"
 		mark_exons_in_clique(cliques)
-		
+		exons_marked = Time.now
+		puts "exons marked #{exons_marked - cliques_found}"
+		collect_cliques
+	end
 
-		# clique_number = 0
-		# clique_data = "organism_name, exon_index,cliques\n"
-		# self.organisms.each do |organism|
-		# 	organism.exons.each_with_index do |exon, exon_index|
-		# 		next if !exon.cliques.empty?
-		# 		exon_uids = get_exon_uids_for_clique(exon)
-		# 		exons_in_clique = mark_exons_in_clique( exon, exon_uids, clique_number )
-		# 		cliques << Clique.new(clique_number, exons_in_clique)
-		# 		clique_number += 1
-		# 	end
-		# end
-		# self.organisms.each do |organism|
-		# 	organism.exons.each_with_index do |exon, exon_index|
-		# 		clique_data += "#{organism.name},#{exon_index+1},#{exon.cliques.join(' ')}\n"
-		# 	end
-		# end
-		# File.open("cliques.txt", "w") { |file| file.write(clique_data) }
+	def collect_cliques
+		self.organisms.each { |organism| organism.exons.map(&:collect_cliques) }
 	end
 
 	def print_cliques
+		
 		organism_exon_clique = ["organism,org_index, exon_index, exon_id, cliques\n"]
 		self.organisms.each_with_index do |organism, org_index|
 			organism.exons.each_with_index do |exon, exon_index|
-				data = "#{organism.name},#{org_index+1},#{exon_index+1},#{(org_index+1)*100+exon_index},#{exon.cliques.join(',')}"
+				data = "#{organism.name},#{org_index+1},#{exon_index+1},#{exon.uuid},#{exon.cliques.join(',')}"
 				organism_exon_clique << data
 			end
 		end
@@ -55,7 +49,6 @@ class CliqueFinder
 			clique_data << "С#{clique_index}, #{clique.join(',')}"
 		end
 		File.open("#{self.file_path}_cliques.csv", "w") { |file| file.write(clique_data.join("\n")) }
-
 
 	end
 

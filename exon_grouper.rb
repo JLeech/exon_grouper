@@ -65,9 +65,11 @@ class ExonGrouper
         self.organisms[(index+1)..-1].each do |match_organism|
           organism.exons.each_with_index do |exon, organism_exon_index|
             exon_includes = false # флаг того, вложен ли экзон в кого-то
+            connection_found = false
             match_organism.exons.each_with_index do |match_exon, match_organism_index|
               # проверяем вложен ли экзон, с учётом процента совпадения из options
               if exon.include?(match_exon, self.percent, blossum_matrix)
+                
                 sequences = [exon.allignement, match_exon.allignement]
                 coords = [] << exon.get_coords << match_exon.get_coords
                 sequences_data = {pair_id: get_pair_id(pair_counter),
@@ -78,17 +80,20 @@ class ExonGrouper
                                   }
                 exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix)
                 exon_matcher.count_everything
-                aff_score = exon_matcher.affine_score
-                rloc_1 = exon_matcher.local_data["local_score"].to_f/exon_matcher.seq_1_score.to_f
-                rloc_2 = exon_matcher.local_data["local_score"].to_f/exon_matcher.seq_2_score.to_f
-                if ([rloc_1,rloc_2].max > 0.2)
+                if ([exon_matcher.rloc_1, exon_matcher.rloc_2].max > 0.4)
                     exon_includes = true
-                    exon.connections << match_exon
-                    match_exon.connections << exon
+                    if !match_exon.connected_organisms.include?(exon.organism_index) && !connection_found
+                        exon.connections << match_exon
+                        match_exon.connections << exon
+                    end
+                    exon.real_connections << match_exon
+                    match_exon.real_connections << exon
+                    connection_found = true
                 end
                 exon_matcher.print_for_csv(output_filename)
                 exon_matcher.print_statistics_for_txt(output_filename)
                 pair_counter += 1
+                
               elsif exon_includes
                 break
               end
@@ -121,10 +126,10 @@ class ExonGrouper
         end
     end
 
-    def draw_as_svg_rectangels
+    def draw_as_svg_rectangels(data_to_show)
         svg_width = self.organisms.first.allignement_length*2 + 200
         svg_height = self.organisms.count * 40 + 40
-        output_file_name = path_to_allignement.split('/').last.split("_").first
+        output_file_name = path_to_allignement.split('/').last.split("_").first + "_#{data_to_show}"
         File.open("#{output_file_name}.svg", 'w') do |file|
             file.write("<svg width=\"#{svg_width+100}\" height=\"#{svg_height}\">")
             file.write("<rect x=\"0\" y=\"0\" width=\"#{svg_width+100}\" height=\"#{svg_height}\" style=\"fill:white;\" />")
@@ -132,7 +137,11 @@ class ExonGrouper
                 draw_organism_line(index, svg_width, file)
                 print_organism_name(organism, index, file)
                 organism.exons.each do |exon|
-                    draw_exon_box(index, exon, file)
+                    if data_to_show == "cliques"
+                        draw_exon_box(index, exon, file, exon.cliques)
+                    else
+                        draw_exon_box(index, exon, file, exon.uuid)
+                    end
                 end
             end
             file.write("</svg>")
@@ -175,13 +184,13 @@ private
         file.write("<line x1=\"#{x_start_coords}\" y1=\"#{y_coords}\" x2=\"#{x_end_coords}\" y2=\"#{y_coords}\" style=\"stroke:rgb(0,0,0);stroke-width:1\" />")
     end
 
-    def draw_exon_box(index, exon, file)
+    def draw_exon_box(index, exon, file, data_to_show)
         y_coords = 40*(index+1)
         x_start_coords = 100
         width = exon.finish - exon.start
         file.write("<rect x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords-15}\" width=\"#{width*2}\" height=\"30\" style=\"fill:rgb(204,255,51);stroke:black;stroke-width:1\" />\n")
         #file.write("<text x=\"#{(exon.start+x_start_coords)*2+10}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.start}:#{exon.finish})</text>")
-        file.write("<text x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.cliques})</text>")
+        file.write("<text x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords}\" fill=\"black\">(#{data_to_show})</text>")
     end
 
 end
