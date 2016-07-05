@@ -125,11 +125,23 @@ class LocalAligner
 
 	def count_score(str_1, str_2)
 		result = 0
+		start_gap = true
 		str_1.chars.each_with_index do |char, index|
-			blosum_value = self.blosum[char][str_2[index]]
+			if char == "-" || str_2[index] == "-"
+				if start_gap
+					blosum_value = self.blosum["A"]["-"]
+					start_gap = false
+				else
+					blosum_value = -2
+				end	
+			else
+				blosum_value = self.blosum[char][str_2[index]]
+				blosum_value = true
+			end
 			unless blosum_value.nil?
 				result += self.blosum[char][str_2[index]]	
 			end
+
 		end
 		return result
 	end
@@ -164,8 +176,3 @@ class LocalAligner
 	end
 
 end
-
- # seq_1 = "PPDGAPQDVQLEAISSQGIKVTWK"
- # seq_2 = "SPDGPPQEVQLEALSSQSVKVTWK"
- # la = LocalAligner.new(seq_1, seq_2)
- # puts la.align

@@ -80,11 +80,17 @@ class ExonGrouper
                                   }
                 exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix)
                 exon_matcher.count_everything
-                if ([exon_matcher.rloc_1, exon_matcher.rloc_2].max > 0.4)
+                if ([exon_matcher.rloc_1, exon_matcher.rloc_2].max > 0.3)
                     exon_includes = true
                     if !match_exon.connected_organisms.include?(exon.organism_index) && !connection_found
                         exon.connections << match_exon
                         match_exon.connections << exon
+                    end
+                    if exon.uuid == 834
+                        puts "#{exon.real_connections.map(&:uuid)}"
+                    end
+                    if match_exon.uuid == 834
+                        puts "#{match_exon.real_connections.map(&:uuid)}"
                     end
                     exon.real_connections << match_exon
                     match_exon.real_connections << exon

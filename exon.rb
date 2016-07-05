@@ -62,8 +62,16 @@ class Exon
 	end
 
 	def collect_cliques
-		if connections.empty? && !real_connections.empty?
+		if !real_connections.empty?
 			self.cliques = real_connections.map(&:cliques).flatten.uniq
+		end
+		if self.uuid == 834
+			puts 
+			puts "xxxxxxx"
+			puts "#{connections.map(&:uuid)}" unless connections.empty?
+			puts "#{real_connections.map(&:cliques)}"
+			puts "#{real_connections.map(&:uuid)}"
+			puts "#{self.cliques}"
 		end
 	end
 
