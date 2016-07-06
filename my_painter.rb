@@ -69,7 +69,7 @@ puts "Grouping: #{time3 - time1}"
 #end
 
 #exon_grouper.print_groups_to_csv
-exon_grouper.make_cliques
+#exon_grouper.make_cliques
 time4 = Time.now
 puts "Cliques: #{time4 - time1}"
 exon_grouper.draw_as_svg_rectangels("cliques")

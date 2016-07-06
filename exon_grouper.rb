@@ -35,7 +35,10 @@ class ExonGrouper
 
     def prepare_data
         # отбираются только первые self.organism_number организмов
-        self.organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare[0..(self.organism_number-1)]
+        all_organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare
+        puts "ORGS: #{all_organisms.length}"
+        self.organisms = all_organisms[0..(self.organism_number-1)]
+        clear_output_file
     end
 
     def group
@@ -80,21 +83,20 @@ class ExonGrouper
                                   }
                 exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix)
                 exon_matcher.count_everything
+                borders = get_borders(exon_matcher, exon, match_exon, sequences_data)
+                File.open("#{self.output_filename}_borders.csv", 'a') { |file| file.write(borders) }
                 if ([exon_matcher.rloc_1, exon_matcher.rloc_2].max > 0.3)
                     exon_includes = true
-                    if !match_exon.connected_organisms.include?(exon.organism_index) && !connection_found
+                    #if !match_exon.connected_organisms.include?(exon.organism_index) && !connection_found
                         exon.connections << match_exon
                         match_exon.connections << exon
-                    end
-                    if exon.uuid == 834
-                        puts "#{exon.real_connections.map(&:uuid)}"
-                    end
-                    if match_exon.uuid == 834
-                        puts "#{match_exon.real_connections.map(&:uuid)}"
-                    end
+                    #end
                     exon.real_connections << match_exon
                     match_exon.real_connections << exon
                     connection_found = true
+                    exon.local_borders << [exon_matcher.local_data['start_position_1'], exon_matcher.local_data['end_position_1']]
+                    match_exon.local_borders << [exon_matcher.local_data['start_position_2'], exon_matcher.local_data['end_position_2']]
+                    File.open("#{self.output_filename}_graph_borders.csv", 'a') { |file| file.write(borders) }
                 end
                 exon_matcher.print_for_csv(output_filename)
                 exon_matcher.print_statistics_for_txt(output_filename)
@@ -153,7 +155,7 @@ class ExonGrouper
             file.write("</svg>")
         end
         puts "exon number : #{organisms.map{ |org| org.exons.length }.inject(:+)}"
-        `inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
+        #`inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
     end
 
     def print_groups_to_csv
@@ -171,9 +173,24 @@ class ExonGrouper
         end
       end
     end
+    
+    def get_borders(aligner, exon, match_exon, sequence_data)
+        data1 = [exon.uuid, match_exon.uuid, sequence_data[:pair_id],aligner.local_data['start_position_1'],aligner.local_data['end_position_1'],aligner.local_data['start_position_2'],aligner.local_data['end_position_2']]
+        data1 = data1.join(",") + "\n"
+        data2 = [match_exon.uuid, exon.uuid, sequence_data[:pair_id],aligner.local_data['start_position_2'],aligner.local_data['end_position_2'],aligner.local_data['start_position_1'],aligner.local_data['end_position_1']]
+        data2 = data2.join(",") + "\n"
+        return data1+data2
+    end
 
 private
-    
+
+    def clear_output_file
+        header = "ex1,ex2,pair_id,st1,end1,st2,end2\n"
+        File.open("#{self.output_filename}_borders.csv", 'w') { |file| file.write(header) }
+        header = "ex1,ex2,pair_id,st1,end1,st2,end2\n"
+        File.open("#{self.output_filename}_graph_borders.csv", 'w') { |file| file.write(header) }
+    end
+
     def get_pair_id(number)
       return "A"+"0"*(5-number.to_s.length) + number.to_s
     end
@@ -194,7 +211,9 @@ private
         y_coords = 40*(index+1)
         x_start_coords = 100
         width = exon.finish - exon.start
-        file.write("<rect x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords-15}\" width=\"#{width*2}\" height=\"30\" style=\"fill:rgb(204,255,51);stroke:black;stroke-width:1\" />\n")
+        color = "rgb(204,255,51)"
+        color = "rgb(255,51,51)" if exon.has_local_overlap?
+        file.write("<rect x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords-15}\" width=\"#{width*2}\" height=\"30\" style=\"fill:#{color};stroke:black;stroke-width:1\" />\n")
         #file.write("<text x=\"#{(exon.start+x_start_coords)*2+10}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.start}:#{exon.finish})</text>")
         file.write("<text x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords}\" fill=\"black\">(#{data_to_show})</text>")
     end

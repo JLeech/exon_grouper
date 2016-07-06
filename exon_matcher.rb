@@ -152,13 +152,13 @@ class ExonMatcher
 
     def print_statistics_for_txt(output_filename)
         output = ""
-        output += "#{self.sequence_data[:pair_id]}\n"
+        output += "#{self.sequence_data[:pair_id]} #{self.sequence_data[:exon_index]} #{self.sequence_data[:match_exon_index]} \n"
         output += "\"#{self.seq_1}\"\n"
         output += "\"#{self.seq_2}\"\n"
         File.open("#{output_filename}_allignements.txt", 'a') { |file| file.write(output) }
 
         output = ""
-        output += "#{self.sequence_data[:pair_id]}\n"
+        output += "#{self.sequence_data[:pair_id]} #{self.sequence_data[:exon_index]} #{self.sequence_data[:match_exon_index]} \n"
         output += "\"#{self.local_data['align_1']}\"\n"
         output += "\"#{self.local_data['align_2']}\"\n"
         File.open("#{output_filename}_local_allignements.txt", 'a') { |file| file.write(output) }

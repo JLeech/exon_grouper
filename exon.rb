@@ -1,4 +1,3 @@
-require "securerandom"
 class Exon
 
 	attr_accessor :start
@@ -15,6 +14,8 @@ class Exon
 
 	attr_accessor :uuid
 
+	attr_accessor :local_borders
+
 	def initialize(start, finish, allignement, organism_index = 1, exon_index = 1)
 		self.start = start
 		self.finish = finish
@@ -22,11 +23,11 @@ class Exon
 		self.connections = []
 		self.real_connections = []
 		self.group = -1
-		#self.uuid = SecureRandom.hex(10)
 		self.uuid = (organism_index+1)*100 + exon_index + 1
 		self.cliques = []
 		self.organism_index = organism_index
 		self.exon_index = exon_index
+		self.local_borders = []
 	end
 
 	def include?(exon, match_persent, blossum)
@@ -79,6 +80,17 @@ class Exon
 		max_score = 0.0
 		allignement.split("").each { |char| max_score += blossum[char][char] }
 		return max_score
+	end
+
+	def has_local_overlap?
+		return false if local_borders.empty?
+		starts = self.local_borders.map(&:first)
+		ends = self.local_borders.map(&:last)
+		if starts.sort.last > ends.sort.first
+			return true
+		else
+			return false
+		end
 	end
 
 	def get_coords

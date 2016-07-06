@@ -26,7 +26,7 @@ class CliqueFinder
 		mark_exons_in_clique(cliques)
 		exons_marked = Time.now
 		puts "exons marked #{exons_marked - cliques_found}"
-		collect_cliques
+		#collect_cliques
 	end
 
 	def collect_cliques
@@ -90,29 +90,5 @@ private
 		end
 		return graph
 	end
-
-	# def get_exon_uids_for_clique(exon)
-	# 	exon_connected_uids = get_connected_uids(exon)
-	# 	exon.connections.each do |connected_exon|
-	# 		exon_connected_uids = exon_connected_uids & get_connected_uids(connected_exon)
-	# 	end
-	# 	return exon_connected_uids
-	# end
-
-	# def mark_exons_in_clique(exon, uids_in_clique, clique_number)
-	# 	marked_exons = []
-	# 	exon.cliques << clique_number
-	# 	exon.connections.each do |connected_exon|
-	# 		if uids_in_clique.include?(connected_exon.uuid)
-	# 			connected_exon.cliques += [clique_number]
-	# 			marked_exons << connected_exon
-	# 		end
-	# 	end
-	# 	return marked_exons
-	# end
-
-	# def get_connected_uids(exon)
-	# 	return (exon.connections.map(&:uuid) + [exon.uuid])
-	# end
 
 end
