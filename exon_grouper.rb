@@ -36,9 +36,9 @@ class ExonGrouper
     def prepare_data
         # отбираются только первые self.organism_number организмов
         all_organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare
-        puts "ORGS: #{all_organisms.length}"
         self.organisms = all_organisms[0..(self.organism_number-1)]
         clear_output_file
+        puts organisms
     end
 
     def group
@@ -71,7 +71,7 @@ class ExonGrouper
             connection_found = false
             match_organism.exons.each_with_index do |match_exon, match_organism_index|
               # проверяем вложен ли экзон, с учётом процента совпадения из options
-              if exon.include?(match_exon, self.percent, blossum_matrix)
+              if exon.include?(match_exon, self.percent)
                 
                 sequences = [exon.allignement, match_exon.allignement]
                 coords = [] << exon.get_coords << match_exon.get_coords

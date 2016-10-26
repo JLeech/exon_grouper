@@ -70,7 +70,9 @@ private
 				break if line.start_with?(">")
 				allignement_string += line.strip
 			else
-				found_flag = true if line.start_with?(">#{organism_name}")
+				if line.start_with?(">")
+					found_flag = true if line.split("|")[1] == organism_name 
+				end
 			end
 		end
 		return allignement_string

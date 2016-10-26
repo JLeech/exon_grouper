@@ -167,7 +167,8 @@ class ExonMatcher
     def print_for_csv(output_filename)
         exon_1_length = self.exon_1.allignement.gsub("-","").length
         exon_2_length = self.exon_2.allignement.gsub("-","").length
-        data = [self.sequence_data[:pair_id],
+        data = [
+                self.sequence_data[:pair_id],
                 self.sequence_data[:org_name],
                 self.sequence_data[:exon_index],
                 self.coords_1[0],

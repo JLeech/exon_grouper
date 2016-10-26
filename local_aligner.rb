@@ -135,11 +135,14 @@ class LocalAligner
 					blosum_value = -2
 				end	
 			else
-				blosum_value = self.blosum[char][str_2[index]]
-				blosum_value = true
+
+				blosum_value = self.blosum[char]
+				start_gap = true
 			end
-			unless blosum_value.nil?
+			if !blosum_value.nil?
 				result += self.blosum[char][str_2[index]]	
+			else
+				result += self.blosum["A"]["-"]
 			end
 
 		end

@@ -30,7 +30,7 @@ class Exon
 		self.local_borders = []
 	end
 
-	def include?(exon, match_persent, blossum)
+	def include?(exon, match_persent)
 		# процент вложенности считается для наименьшего экзона
 		if match_persent == 100
 			return click_include(exon) 

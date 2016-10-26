@@ -12,6 +12,8 @@ class Organism
 		@exons = exons
 		@number = number
 		@allignement_length = allignement_length
+		puts name
+		puts allignement_length
 	end
 
 end
