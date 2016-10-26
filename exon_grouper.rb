@@ -64,6 +64,7 @@ class ExonGrouper
       ExonMatcher.clear_output_file(output_filename)
       pair_counter = 0
       self.organisms.each_with_index do |organism, index|
+        puts "#{index} : #{organism.name}"
         break if index+1 == self.organisms.length
         self.organisms[(index+1)..-1].each do |match_organism|
           organism.exons.each_with_index do |exon, organism_exon_index|
@@ -72,7 +73,6 @@ class ExonGrouper
             match_organism.exons.each_with_index do |match_exon, match_organism_index|
               # проверяем вложен ли экзон, с учётом процента совпадения из options
               if exon.include?(match_exon, self.percent)
-                
                 sequences = [exon.allignement, match_exon.allignement]
                 coords = [] << exon.get_coords << match_exon.get_coords
                 sequences_data = {pair_id: get_pair_id(pair_counter),
@@ -81,7 +81,8 @@ class ExonGrouper
                                   match_org_name: match_organism.name,
                                   match_exon_index: match_exon.uuid,
                                   }
-                exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix)
+                exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix,
+                                               organism, match_organism, exon, match_exon)
                 exon_matcher.count_everything
                 borders = get_borders(exon_matcher, exon, match_exon, sequences_data)
                 File.open("#{self.output_filename}_borders.csv", 'a') { |file| file.write(borders) }

@@ -35,7 +35,12 @@ class ExonMatcher
     attr_accessor :exon_2
     attr_accessor :sequence_data
 
-    def initialize(sequences = [], coords = [], sequence_data = {}, blosum = nil)
+    attr_accessor :organism
+    attr_accessor :match_organism
+    attr_accessor :exon
+    attr_accessor :match_exon
+
+    def initialize(sequences = [], coords = [], sequence_data = {}, blosum = nil, organism, match_organism, exon, match_exon)
         self.blosum = blosum.nil? ? DataProcessor.parse_blossum : blosum
         self.sequences = sequences
         self.coords = coords
@@ -51,6 +56,12 @@ class ExonMatcher
         self.deletions_2 = 0
 
         self.sequence_data = sequence_data
+
+        # NEED TO BE OPTIMAZED
+        self.organism = organism
+        self.match_organism = match_organism
+        self.exon = exon
+        self.match_exon = match_exon
     end
 
     def count_everything(params = {})
@@ -152,9 +163,10 @@ class ExonMatcher
 
     def print_statistics_for_txt(output_filename)
         output = ""
-        output += "#{self.sequence_data[:pair_id]} #{self.sequence_data[:exon_index]} #{self.sequence_data[:match_exon_index]} \n"
-        output += "\"#{self.seq_1}\"\n"
-        output += "\"#{self.seq_2}\"\n"
+        output += "#{self.sequence_data[:pair_id]} #{self.sequence_data[:exon_index]} #{self.sequence_data[:match_exon_index]} AFF: #{self.affine_score} Rloc1: #{self.rloc_1} Rloc2: #{self.rloc_2}\n"
+        #output += "\"#{self.seq_1}\"\n"
+        #output += "\"#{self.seq_2}\"\n"
+        output += close_exons
         File.open("#{output_filename}_allignements.txt", 'a') { |file| file.write(output) }
 
         output = ""
@@ -162,6 +174,32 @@ class ExonMatcher
         output += "\"#{self.local_data['align_1']}\"\n"
         output += "\"#{self.local_data['align_2']}\"\n"
         File.open("#{output_filename}_local_allignements.txt", 'a') { |file| file.write(output) }
+    end
+
+    def close_exons
+        seq_1_updated = ""
+        seq_2_updated = ""
+
+        if self.coords_1[0] > self.coords_2[0]
+            seq_1_updated += organism.allignement[self.coords_2[0]..(self.coords_1[0]-1)].downcase
+        elsif self.coords_1[0] < self.coords_2[0]
+            seq_2_updated += match_organism.allignement[self.coords_1[0]..(self.coords_2[0]-1)].downcase
+        end
+
+        seq_1_updated += organism.allignement[self.coords_1[0]..self.coords_1[1]]
+        seq_2_updated += match_organism.allignement[self.coords_2[0]..self.coords_2[1]]
+
+        if self.coords_1[1] > self.coords_2[1]
+            seq_2_updated += match_organism.allignement[(self.coords_2[1]+1)..self.coords_1[1]].downcase
+        elsif self.coords_1[1] < self.coords_2[1]
+            seq_1_updated += organism.allignement[(self.coords_1[1]+1)..self.coords_2[1]].downcase
+        end                
+
+        return "\"#{seq_1_updated}\"\n\"#{seq_2_updated}\"\n"
+
+        #puts organism.allignement[self.coords_1[0]..self.coords_1[1]]
+        #puts self.seq_2
+
     end
 
     def print_for_csv(output_filename)

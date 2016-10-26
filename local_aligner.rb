@@ -28,6 +28,7 @@ class LocalAligner
 
 	attr_accessor :seq_1
 	attr_accessor :seq_2
+
 	attr_accessor :blosum
 
 	BLOSUM_PATH = "./data/blosum_penalty_matrix"
@@ -55,8 +56,8 @@ class LocalAligner
 				else
 					diagonal = matrix[i-1,j-1]+blosum_value
 				end
-				left = matrix[i,j-1]+blosum["A"]["-"]
-				top = matrix[i-1,j]+blosum["A"]["-"]
+				left = matrix[i,j-1] + blosum["A"]["-"]
+				top = matrix[i-1,j] + blosum["A"]["-"]
 				max = [diagonal, left, top, 0].max
 				back_ways["#{i}_#{j}"] = ways[[diagonal, left, top, 0].index(max)]
 				matrix[i,j] = max
@@ -69,20 +70,21 @@ class LocalAligner
 		max_position = matrix.get_max_position
 		aligned_1 = ""
 		aligned_2 = ""
-		end_positions = [max_position[0]-1,max_position[1]-1]
+		end_positions = [max_position[0]-1, max_position[1]-1]
 		while true
-			break if matrix[max_position[0],max_position[1]] == 0
+			break if matrix[max_position[0], max_position[1]] == 0
 			current_way = ways[max_position.join('_')]
 			aligned_1 += current_way[0] == 0 ? "-" : self.seq_1[max_position[0]-1]
 			aligned_2 += current_way[1] == 0 ? "-" : self.seq_2[max_position[1]-1]
 			max_position = [max_position,current_way].transpose.map {|x| x.reduce(:+)}
 		end
 		start_positions = max_position
+		margin_al_1, margin_al_2 = margin_allignements(start_positions, end_positions, aligned_1.reverse, aligned_2.reverse)
 		results = { 
 			"start_positions" => start_positions,
 			"end_positions" => end_positions,
-			"align_1" => aligned_1.reverse,
-			"align_2" => aligned_2.reverse,
+			"align_1" => margin_al_1,
+			"align_2" => margin_al_2,
 			"score" => count_score(aligned_1, aligned_2)
 		  }
 		return results
@@ -157,6 +159,28 @@ class LocalAligner
 			puts
 		end
 	end 
+
+	def margin_allignements(start_positions, end_positions, al1, al2)
+        coords_1 = [start_positions[0], end_positions[0]]
+        coords_2 = [start_positions[1], end_positions[1]]
+        margin_al_1 = ""
+        margin_al_2 = ""
+        if start_positions[0] > start_positions[1]
+        	margin_al_2 += "+"*(start_positions[0]-start_positions[1])
+        elsif start_positions[0] < start_positions[1]
+        	margin_al_1 += "+"*(start_positions[1]-start_positions[0])
+        end
+        margin_al_1 += seq_1[0..(start_positions[0]-1)].downcase if start_positions[0] > 0
+        margin_al_1 += al1
+        margin_al_1 += seq_1[(end_positions[0]+1)..-1].downcase if end_positions[0] < seq_1.length
+
+        margin_al_2 += seq_2[0..(start_positions[1]-1)].downcase if start_positions[1] > 0
+        margin_al_2 += al2
+        margin_al_2 += seq_2[(end_positions[1]+1)..-1].downcase if end_positions[1] < seq_1.length
+
+        return [margin_al_1, margin_al_2]
+        #puts seq_1_margined
+    end
 
 	def self.parse_blosum
 		alphabet = []
