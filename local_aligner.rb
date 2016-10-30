@@ -83,9 +83,11 @@ class LocalAligner
 		results = { 
 			"start_positions" => start_positions,
 			"end_positions" => end_positions,
-			"align_1" => margin_al_1,
-			"align_2" => margin_al_2,
-			"score" => count_score(aligned_1, aligned_2)
+			"align_1" => aligned_1,
+			"align_2" => aligned_2,
+			"score" => count_score(aligned_1, aligned_2),
+			"margined_al_1" => margin_al_1,
+			"margined_al_2" => margin_al_2
 		  }
 		return results
 	end
@@ -95,8 +97,8 @@ class LocalAligner
 		start_position_2 = results["start_positions"][1]
 		end_position_1 = results["end_positions"][0]
 		end_position_2 = results["end_positions"][1]
-		length_1 = end_position_1 - start_position_1+1 
-		length_2 = end_position_2 - start_position_2+1
+		length_1 = results["align_1"].length
+		length_2 = results["align_2"].length
 		score_1 = count_score(results["align_1"],results["align_1"])
 		score_2 = count_score(results["align_2"],results["align_2"])
 		local_length_coef = ([length_1,length_2].min.to_f)/([length_1,length_2].max.to_f)
@@ -118,9 +120,11 @@ class LocalAligner
 			"local_length_2_coef" => length_2.to_f/self.seq_2.length,
 			"local_score_1_coef" => local_score_1_coef,
 			"local_score_2_coef" => local_score_2_coef,
-			"align_1" => results["align_1"],
-			"align_2" => results["align_2"],
+			"align_1" => results["margined_al_1"], #results["align_1"],
+			"align_2" => results["margined_al_2"], #results["align_2"],
 			"local_min" => [local_score_1_coef,local_score_2_coef].min,
+			"raw_length_1" => length_1,
+			"raw_length_2" => length_2
 		}
 		return formatted_result
 	end
@@ -176,8 +180,14 @@ class LocalAligner
 
         margin_al_2 += seq_2[0..(start_positions[1]-1)].downcase if start_positions[1] > 0
         margin_al_2 += al2
-        margin_al_2 += seq_2[(end_positions[1]+1)..-1].downcase if end_positions[1] < seq_1.length
+        margin_al_2 += seq_2[(end_positions[1]+1)..-1].downcase if end_positions[1] < seq_2.length
 
+        if margin_al_1.length > margin_al_2.length
+        	margin_al_2 += '+'*( margin_al_1.length - margin_al_2.length )
+        elsif margin_al_1.length < margin_al_2.length
+        	margin_al_1 += '+'*( margin_al_2.length - margin_al_1.length )
+        end
+        
         return [margin_al_1, margin_al_2]
         #puts seq_1_margined
     end

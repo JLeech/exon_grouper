@@ -84,6 +84,7 @@ class ExonGrouper
                 exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix,
                                                organism, match_organism, exon, match_exon)
                 exon_matcher.count_everything
+                set_exon_coefs(exon, match_exon, exon_matcher)
                 borders = get_borders(exon_matcher, exon, match_exon, sequences_data)
                 File.open("#{self.output_filename}_borders.csv", 'a') { |file| file.write(borders) }
                 if ([exon_matcher.rloc_1, exon_matcher.rloc_2].max > 0.3)
@@ -133,6 +134,19 @@ class ExonGrouper
                 set_groups_for_connected(connected_exon)
             end
         end
+    end
+
+    def set_exon_coefs(exon, match_exon, exon_matcher)
+        rloc_max = [exon_matcher.rloc_1, exon_matcher.rloc_2].max
+        local_length_coef_max = [ exon_matcher.local_data["local_length_1_coef"], exon_matcher.local_data["local_length_2_coef"] ].max
+        min_local_length = [ exon_matcher.local_data["raw_length_1"], exon_matcher.local_data["raw_length_2"] ].min
+        exon.min_local_lengths << min_local_length
+        exon.r_maxes << rloc_max
+        exon.local_length_coef_maxes << local_length_coef_max
+
+        match_exon.min_local_lengths << min_local_length
+        match_exon.r_maxes << rloc_max
+        match_exon.local_length_coef_maxes << local_length_coef_max
     end
 
     def draw_as_svg_rectangels(data_to_show)
@@ -212,8 +226,7 @@ private
         y_coords = 40*(index+1)
         x_start_coords = 100
         width = exon.finish - exon.start
-        color = "rgb(204,255,51)"
-        color = "rgb(255,51,51)" if exon.has_local_overlap?
+        color = exon.get_svg_color
         file.write("<rect x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords-15}\" width=\"#{width*2}\" height=\"30\" style=\"fill:#{color};stroke:black;stroke-width:1\" />\n")
         #file.write("<text x=\"#{(exon.start+x_start_coords)*2+10}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.start}:#{exon.finish})</text>")
         file.write("<text x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords}\" fill=\"black\">(#{data_to_show})</text>")

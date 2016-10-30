@@ -9,6 +9,10 @@ class Exon
 	attr_accessor :group
 	attr_accessor :cliques
 
+	attr_accessor :r_maxes
+	attr_accessor :local_length_coef_maxes
+	attr_accessor :min_local_lengths
+
 	attr_accessor :organism_index
 	attr_accessor :exon_index
 
@@ -28,6 +32,9 @@ class Exon
 		self.organism_index = organism_index
 		self.exon_index = exon_index
 		self.local_borders = []
+		self.r_maxes = []
+		self.local_length_coef_maxes = []
+		self.min_local_lengths = []
 	end
 
 	def include?(exon, match_persent)
@@ -99,6 +106,35 @@ class Exon
 		puts "#{self.group}"
 		puts allignement
 		puts "-----------------"
+	end
+
+	def get_svg_color
+		color = "rgb(18, 221, 232)"
+		color_letter = rmax_leng_coef
+        color = "rgb(115, 219, 67)" if color_letter == "g"
+        color = "rgb(232, 221, 18)" if color_letter == "y"
+        return color
+	end
+
+private
+
+	def rmax_leng_coef
+		counter_min = 0.0
+		counter_max = 0.0
+		self.r_maxes.each_with_index do |r_max, index|
+			if ((r_max > 0.3) & (self.local_length_coef_maxes[index] > 0.75) & (self.min_local_lengths[index] > 5) )
+				counter_max += 1.0
+			elsif ((r_max < 0.3) & (self.min_local_lengths[index] < 5) )
+				counter_min += 1.0
+			end
+		end 
+		if counter_max/r_maxes.length > 0.75
+			return "g"
+		end
+		if counter_min/r_maxes.length > 0.75
+			return "y"
+		end
+		return "b"
 	end
 
 end
