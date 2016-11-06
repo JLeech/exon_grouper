@@ -8,11 +8,11 @@ class Organism
 	attr_accessor :allignement_length
 	attr_accessor :allignement
 
-	def initialize(name, exons, number, allignement_length, allignement)
+	def initialize(name, exons, number, allignement)
 		self.name = name
 		self.exons = exons
 		self.number = number
-		self.allignement_length = allignement_length
+		self.allignement_length = allignement.length
 		self.allignement = allignement
 		puts name
 	end

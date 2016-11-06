@@ -55,7 +55,7 @@ private
 			current_exons.push( Exon.new(exon_start, exon_finish, organism_allignement[exon_start..exon_finish], index, exon_index) )
 		end
 
-		organism = Organism.new(organism_name, current_exons, index, organism_allignement.length, organism_allignement)
+		organism = Organism.new(organism_name, current_exons, index, organism_allignement)
 		return organism
 	end
 

@@ -5,9 +5,9 @@ class Exon
 	attr_accessor :allignement
 
 	attr_accessor :connections
-	attr_accessor :real_connections
+#	attr_accessor :real_connections
 	attr_accessor :group
-	attr_accessor :cliques
+#	attr_accessor :cliques
 
 	attr_accessor :r_maxes
 	attr_accessor :local_length_coef_maxes
@@ -25,10 +25,10 @@ class Exon
 		self.finish = finish
 		self.allignement = allignement
 		self.connections = []
-		self.real_connections = []
+#		self.real_connections = []
 		self.group = -1
 		self.uuid = (organism_index+1)*100 + exon_index + 1
-		self.cliques = []
+		# self.cliques = []
 		self.organism_index = organism_index
 		self.exon_index = exon_index
 		self.local_borders = []
@@ -40,7 +40,7 @@ class Exon
 	def include?(exon, match_persent)
 		# процент вложенности считается для наименьшего экзона
 		if match_persent == 100
-			return click_include(exon) 
+			return click_include?(exon) 
 		end
 		first_range = (start..finish)
 		second_range = (exon.start..exon.finish)
@@ -64,16 +64,16 @@ class Exon
 		return match_length
 	end
 
-	def click_include(exon)
+	def click_include?(exon)
 		return true if start == exon.start && finish == exon.finish
 		return false
 	end
 
-	def collect_cliques
-		if !real_connections.empty?
-			self.cliques = real_connections.map(&:cliques).flatten.uniq
-		end
-	end
+	# def collect_cliques
+	# 	if !real_connections.empty?
+	# 		self.cliques = real_connections.map(&:cliques).flatten.uniq
+	# 	end
+	# end
 
 	def max_blossum(blossum)
 		max_score = 0.0
@@ -81,16 +81,16 @@ class Exon
 		return max_score
 	end
 
-	def has_local_overlap?
-		return false if local_borders.empty?
-		starts = self.local_borders.map(&:first)
-		ends = self.local_borders.map(&:last)
-		if starts.sort.last > ends.sort.first
-			return true
-		else
-			return false
-		end
-	end
+	# def has_local_overlap?
+	# 	return false if local_borders.empty?
+	# 	starts = self.local_borders.map(&:first)
+	# 	ends = self.local_borders.map(&:last)
+	# 	if starts.sort.last > ends.sort.first
+	# 		return true
+	# 	else
+	# 		return false
+	# 	end
+	# end
 
 	def get_coords
 		return [start, finish]
@@ -116,9 +116,7 @@ class Exon
         return color
 	end
 
-private
-
-	def rmax_leng_coef
+	def get_validations
 		counter_min = 0.0
 		counter_max = 0.0
 		self.r_maxes.each_with_index do |r_max, index|
@@ -127,11 +125,18 @@ private
 			elsif ((r_max < 0.3) & (self.min_local_lengths[index] < 5) )
 				counter_min += 1.0
 			end
-		end 
-		if counter_max/r_maxes.length > 0.75
+		end
+		return [counter_min, counter_max]
+	end
+
+private
+
+	def rmax_leng_coef
+ 		counter_max, counter_min = get_validations
+		if counter_max/self.r_maxes.length > 0.75
 			return "g"
 		end
-		if counter_min/r_maxes.length > 0.75
+		if counter_min/self.r_maxes.length > 0.75
 			return "y"
 		end
 		return "b"

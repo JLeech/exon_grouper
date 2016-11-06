@@ -38,7 +38,6 @@ class ExonGrouper
         all_organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare
         self.organisms = all_organisms[0..(self.organism_number-1)]
         clear_output_file
-        puts organisms
     end
 
     def group
@@ -53,11 +52,11 @@ class ExonGrouper
         make_groups(exons)
     end
 
-    def make_cliques
-        clique_finder = CliqueFinder.new(self.organisms, output_filename)
-        clique_finder.find_cliques
-        clique_finder.print_cliques
-    end
+    # def make_cliques
+    #     clique_finder = CliqueFinder.new(self.organisms, output_filename)
+    #     clique_finder.find_cliques
+    #     clique_finder.print_cliques
+    # end
 
     def make_connections
       ExonMatcher.csv_header(output_filename)
@@ -89,12 +88,8 @@ class ExonGrouper
                 File.open("#{self.output_filename}_borders.csv", 'a') { |file| file.write(borders) }
                 if ([exon_matcher.rloc_1, exon_matcher.rloc_2].max > 0.3)
                     exon_includes = true
-                    #if !match_exon.connected_organisms.include?(exon.organism_index) && !connection_found
                         exon.connections << match_exon
                         match_exon.connections << exon
-                    #end
-                    exon.real_connections << match_exon
-                    match_exon.real_connections << exon
                     connection_found = true
                     exon.local_borders << [exon_matcher.local_data['start_position_1'], exon_matcher.local_data['end_position_1']]
                     match_exon.local_borders << [exon_matcher.local_data['start_position_2'], exon_matcher.local_data['end_position_2']]
@@ -127,14 +122,14 @@ class ExonGrouper
         self.max_group = group  
     end
 
-    def set_groups_for_connected(exon)
-        exon.connections.each do |connected_exon|
-            if connected_exon.group == -1
-                connected_exon.group = exon.group
-                set_groups_for_connected(connected_exon)
-            end
-        end
-    end
+    # def set_groups_for_connected(exon)
+    #     exon.connections.each do |connected_exon|
+    #         if connected_exon.group == -1
+    #             connected_exon.group = exon.group
+    #             set_groups_for_connected(connected_exon)
+    #         end
+    #     end
+    # end
 
     def set_exon_coefs(exon, match_exon, exon_matcher)
         rloc_max = [exon_matcher.rloc_1, exon_matcher.rloc_2].max
@@ -170,7 +165,7 @@ class ExonGrouper
             file.write("</svg>")
         end
         puts "exon number : #{organisms.map{ |org| org.exons.length }.inject(:+)}"
-        #`inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
+        `inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
     end
 
     def print_groups_to_csv
@@ -178,16 +173,16 @@ class ExonGrouper
         group_saver.save_to_csv
     end
 
-    def reallocate_connections
-      self.organisms.each do |organism|
-        organism.exons.each do |exon|
-          next if exon.connections.empty?
-          first_connected_exon = exon.connections[0]
-          exon.connections = exon.connections.delete_if { |conn| conn.organism_index == first_connected_exon.organism_index }
-          first_connected_exon.connections = first_connected_exon.connections.delete_if { |conn| conn.organism_index == exon.organism_index }
-        end
-      end
-    end
+    # def reallocate_connections
+    #   self.organisms.each do |organism|
+    #     organism.exons.each do |exon|
+    #       next if exon.connections.empty?
+    #       first_connected_exon = exon.connections[0]
+    #       exon.connections = exon.connections.delete_if { |conn| conn.organism_index == first_connected_exon.organism_index }
+    #       first_connected_exon.connections = first_connected_exon.connections.delete_if { |conn| conn.organism_index == exon.organism_index }
+    #     end
+    #   end
+    # end
     
     def get_borders(aligner, exon, match_exon, sequence_data)
         data1 = [exon.uuid, match_exon.uuid, sequence_data[:pair_id],aligner.local_data['start_position_1'],aligner.local_data['end_position_1'],aligner.local_data['start_position_2'],aligner.local_data['end_position_2']]

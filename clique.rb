@@ -1,18 +1,18 @@
-require_relative "exon.rb"
+# require_relative "exon.rb"
 
-class Clique
+# class Clique
 	
-	attr_accessor :clique_number
-	attr_accessor :exons
+# 	attr_accessor :clique_number
+# 	attr_accessor :exons
 
 
-	def initialize(clique_number, exons)
-		self.clique_number = clique_number
-		self.exons = exons
-	end
+# 	def initialize(clique_number, exons)
+# 		self.clique_number = clique_number
+# 		self.exons = exons
+# 	end
 
-	def length
-		return exons.length
-	end
+# 	def length
+# 		return exons.length
+# 	end
 
-end
+# end
