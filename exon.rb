@@ -32,9 +32,9 @@ class Exon
 		self.organism_index = organism_index
 		self.exon_index = exon_index
 		self.local_borders = []
-		self.r_maxes = []
-		self.local_length_coef_maxes = []
-		self.min_local_lengths = []
+		self.r_maxes = Hash.new {|hsh, key| hsh[key] = [] }
+		self.local_length_coef_maxes = Hash.new {|hsh, key| hsh[key] = [] }
+		self.min_local_lengths = Hash.new {|hsh, key| hsh[key] = [] }
 	end
 
 	def include?(exon, match_persent)
@@ -67,6 +67,14 @@ class Exon
 	def click_include?(exon)
 		return true if start == exon.start && finish == exon.finish
 		return false
+	end
+
+	def get_connected_hash
+		connects = Hash.new {|hsh, key| hsh[key] = [] }
+		connections.each do |connected|
+			connects[connected.organism_index] << connected
+		end
+		return connects
 	end
 
 	# def collect_cliques
@@ -110,26 +118,37 @@ class Exon
 
 	def get_svg_color
 		color = "rgb(18, 221, 232)"
-		color_letter = rmax_leng_coef
-        color = "rgb(115, 219, 67)" if color_letter == "g"
-        color = "rgb(232, 221, 18)" if color_letter == "y"
+        color = "rgb(115, 219, 67)" if green?
+        color = "rgb(232, 221, 18)" if yellow?
         return color
+	end
+
+	def green?
+		return color_letter == "g"
+	end
+
+	def blue?
+		return color_letter == "b"
+	end
+
+	def yellow?
+		return color_letter == "y"
 	end
 
 	def get_validations
 		counter_min = 0.0
 		counter_max = 0.0
-		self.r_maxes.each_with_index do |r_max, index|
-			if ((r_max > 0.3) & (self.local_length_coef_maxes[index] > 0.75) & (self.min_local_lengths[index] > 5) )
+		# con_org_id connected_organism_id
+		self.r_maxes.keys.each do |con_org_id|
+			if (self.r_maxes[con_org_id].max > 0.3) & (self.local_length_coef_maxes[con_org_id].max > 0.75) & (self.min_local_lengths[con_org_id].min > 5)
 				counter_max += 1.0
-			elsif ((r_max < 0.3) & (self.min_local_lengths[index] < 5) )
+			elsif ((self.r_maxes[con_org_id].max < 0.3) & (self.min_local_lengths[con_org_id].min < 5) )
 				counter_min += 1.0
 			end
-		end
-		return [counter_min, counter_max]
-	end
+		end 
 
-private
+		return [counter_max, counter_min]
+	end
 
 	def rmax_leng_coef
  		counter_max, counter_min = get_validations
@@ -141,5 +160,15 @@ private
 		end
 		return "b"
 	end
+
+	def color_letter
+		return @color_letter unless @color_letter.nil?
+		@color_letter = rmax_leng_coef
+		return @color_letter
+	end
+
+private
+
+
 
 end
