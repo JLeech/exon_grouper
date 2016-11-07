@@ -41,6 +41,7 @@ class ExonGrouper
   end
 
   def group
+    time1 = Time.now
     exons = []
     # создаются связи между экзонами (какие вложены в какие)
     make_connections
@@ -48,8 +49,13 @@ class ExonGrouper
     self.organisms.each do |organism|
       exons += organism.exons
     end
+    time2 = Time.now
+    puts "making connections: #{time2 - time1}"
     #нумеруются группы вложенности
     make_groups(exons)
+    time3 = Time.now
+    puts "making groups: #{time3 - time2}"
+    
   end
 
   # def make_cliques
@@ -118,8 +124,8 @@ class ExonGrouper
   def group_green(exons)
     group = 0
     exons.each do |exon|
-      if exon.group == -1 && exon.green?
-        exon.group = group
+      if exon.group.include?(-1) && exon.green?
+        exon.group = [group]
         group += 1
         # проходим по всем вложенным, и проставляем им группу текущего
         set_groups_for_connected(exon)
@@ -129,9 +135,8 @@ class ExonGrouper
   end
 
   def group_blue(exons, group)
-
     exons.each do |exon|
-      if exon.group == -1 && exon.blue?
+      if exon.group.include?(-1) && exon.blue?
         group = set_blue_group(exon, group)
       end
     end
@@ -142,32 +147,45 @@ class ExonGrouper
     connected_hash = exon.get_connected_hash
     trusted_exons = []
     current_column = 0
-    #while current_column < connected_hash.max_by{|k,v| v.length}[1]-1 
-      connected_hash.keys.each do |key|
-        cur_exon = connected_hash[key][current_column]
-        trusted_exons << cur_exon if cur_exon.green?
+    unless connected_hash.keys.empty?
+      puts "--------------------------------------------"
+      puts "#{connected_hash.keys}"
+      puts "#{connected_hash.max_by{|k,v| v.length}[1].length-1}"
+      while current_column < connected_hash.max_by{|k,v| v.length}[1].length 
+        connected_hash.keys.each do |key|
+          if connected_hash[key].length > current_column
+            cur_exon = connected_hash[key][current_column]
+            trusted_exons << cur_exon if cur_exon.green?
+          end
+        end
+        groups = Hash.new {|hsh, key| hsh[key] = 0 }  
+
+        # если он стоит отдельно и нет никаких зелёных. обработать случай отдельно
+        if trusted_exons.empty?
+          puts "empty"
+          return group
+        end
+        #if trusted_exons.length < exon.connections.length/3.0 
+          #exon.group = [group + 1]
+          #return group
+        #end
+
+        trusted_exons.each do |trusted|
+          groups[trusted.group[0]] += 1
+        end   
+        puts "#{exon.uuid}"
+        puts "#{groups}"
+        puts "========"
+        trusted_group = groups.max_by{|k,v| v}
+        if exon.group.include?(-1) 
+          exon.group = [trusted_group[0]]
+        else
+          exon.group << trusted_group[0]
+        end
+        current_column += 1
+        trusted_exons = []
       end
-      groups = Hash.new {|hsh, key| hsh[key] = 0 }
-
-      # TODO
-      # если он стоит отдельно и нет никаких зелёных. обработать случай отдельно
-      if trusted_exons.length < exon.connections.length/3.0 
-        exon.group = group + 1
-        return group + 1
-      end 
-
-      trusted_exons.each do |trusted|
-        groups[trusted.group] += 1
-      end 
-
-      trusted_group = groups.max_by{|k,v| v}
-      if trusted_group.nil?
-        exon.group = group+1
-        return group + 1
-      else
-        exon.group = trusted_group[0]
-      end
-    #end
+    end
     return group
   end
 

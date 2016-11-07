@@ -26,7 +26,7 @@ class Exon
 		self.allignement = allignement
 		self.connections = []
 #		self.real_connections = []
-		self.group = -1
+		self.group = [-1]
 		self.uuid = (organism_index+1)*100 + exon_index + 1
 		# self.cliques = []
 		self.organism_index = organism_index
@@ -165,6 +165,10 @@ class Exon
 		return @color_letter unless @color_letter.nil?
 		@color_letter = rmax_leng_coef
 		return @color_letter
+	end
+
+	def get_unique_groups
+		return self.group.uniq
 	end
 
 private
