@@ -20,6 +20,7 @@ class ExonGrouper
   attr_accessor :organisms
   attr_accessor :max_group
   attr_accessor :output_filename
+  attr_accessor :exons_hash
 
   def initialize(options = {})
 
@@ -31,13 +32,14 @@ class ExonGrouper
 
     self.blossum_matrix = DataProcessor.parse_blossum
     self.organisms = []
+    self.exons_hash = {}
   end
 
   def prepare_data
     # отбираются только первые self.organism_number организмов
     all_organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare
-    #self.organisms = all_organisms[0..(self.organism_number-1)]
-    self.organisms = [all_organisms[0],all_organisms[2],all_organisms[3],all_organisms[4],all_organisms[8],all_organisms[9]]
+    self.organisms = all_organisms[0..(self.organism_number-1)]
+    #self.organisms = [all_organisms[0],all_organisms[2],all_organisms[3],all_organisms[4],all_organisms[8],all_organisms[9]]
     clear_output_file
   end
 
@@ -115,73 +117,38 @@ class ExonGrouper
   end
 
   def make_groups(exons)
+    exons.each do |exon|
+      self.exons_hash[exon.uuid] = exon  
+    end
+    
     group = group_green(exons)
     #group = group_blue(exons, group)
     #self.max_group = group
   end
 
   def group_green(exons)
-    # group = 0
-    # exons.each do |exon|
-    #   if exon.not_grouped? && exon.green?
-    #     exon.group = [group]
-    #     group += 1
-    #     # проходим по всем вложенным, и проставляем им группу текущего
-    #     set_groups_for_connected(exon)
-    #   end
-    # end
-    # return group
-
     group = 0
-    exon_org = 0
-    exons.each_with_index do |exon, index|
-      #exon_org = exon.organism_index if index == 0
-      #break if exon.organism_index != exon_org
-      if exon.green?
-        neighbours = {}
-        possibles = []
-        green_connections = []
-        exon.connections.each { |connected| green_connections << connected if connected.green? }
-
-        green_connections.each do |connected|
-          neighbours[connected.uuid] = connected
-        end
-        
-        green_connections.each do |connected|
-          connected.connections.each do |far_neighbour|
-            unless neighbours[far_neighbour.uuid].nil?
-              possibles << far_neighbour if far_neighbour.green?
-            end
-          end
-        end
-        neighbours[exon.uuid] = exon
-        possibles << exon
-        puts "E: #{exon.uuid}"
-        puts "N: #{neighbours.keys}"
-        clique_ids = possibles.map { |pos| pos.connections.map(&:uuid)+[pos.uuid] }.inject(&:&)
-        puts "I: #{clique_ids}"
-        if clique_ids.nil?
-          exon.group << [-99]
-          next
-        end
-        clique = []
-        clique_ids.each { |id| clique << neighbours[id]}
-        clique.compact!
-        next if clique.length < 2
-        puts "G: #{clique.map { |pos| pos.group }}"
-        common_group = (clique.map { |pos| pos.group }).inject(&:&)
-        if common_group.empty?
-          clique.each { |pos| pos.group << group}
-          clique.each { |pos| pos.group.uniq}
-          exon.group << group
-          exon.group.uniq
-          group += 1
-        end
-        puts "------------"
+    exons.each do |exon|
+      if ((exon.group.empty?) & (exon.green?))
+        cf = CliqueFinder.new(exon)
+        cf.make_graph
+        cliques = cf.make_cliques
+        group = mark_cliques(cliques, group)
       end
     end
     return group
   end
+
+  def mark_cliques(cliques, group)
+    cliques.each do |clique|
+      clique.each do |exon_in_clique_id|
+        self.exons_hash[exon_in_clique_id].group << group
+      end
+      group += 1
+    end
+    return group
+  end
+
 
   def group_blue(exons, group)
     exons.each do |exon|

@@ -1,94 +1,123 @@
-# require_relative "exon.rb"
-# require_relative "organism.rb"
-# require_relative "clique.rb"
+require 'set'
 
-# class CliqueFinder
+class Set
+  def take!(args)
+    taken = self.take(args)
+    self.subtract(taken)
+    return taken
+  end
+end
 
-# 	attr_accessor :organisms
-# 	attr_accessor :file_path
-# 	attr_accessor :cliques
-	
-# 	def initialize(organisms, file_path = "")
-# 		self.organisms = organisms
-# 		self.file_path = file_path
-# 		self.cliques = []
-# 	end
+class Kerbosh
 
-# 	def find_cliques
-# 		time_start = Time.now
-# 		puts "clique finder"
-# 		graph = construct_graph
-# 		graph_constructed = Time.now
-# 		puts "graph constructed #{graph_constructed - time_start}"
-# 		self.cliques = kerbosh([], graph.keys, [], graph)
-# 		cliques_found = Time.now
-# 		puts "cliques found #{cliques_found - graph_constructed}"
-# 		mark_exons_in_clique(cliques)
-# 		exons_marked = Time.now
-# 		puts "exons marked #{exons_marked - cliques_found}"
-# 		#collect_cliques
-# 	end
+    attr_accessor :cliques
+    attr_accessor :graph
 
-# 	def collect_cliques
-# 		self.organisms.each { |organism| organism.exons.map(&:collect_cliques) }
-# 	end
+    def initialize(graph)
+      self.cliques = []
+      self.graph = graph
+    end
 
-# 	def print_cliques
-		
-# 		organism_exon_clique = ["organism,org_index, exon_index, exon_id, cliques\n"]
-# 		self.organisms.each_with_index do |organism, org_index|
-# 			organism.exons.each_with_index do |exon, exon_index|
-# 				data = "#{organism.name},#{org_index+1},#{exon_index+1},#{exon.uuid},#{exon.cliques.join(',')}"
-# 				organism_exon_clique << data
-# 			end
-# 		end
-# 		File.open("#{self.file_path}_org_cliques.csv", "w") { |file| file.write(organism_exon_clique.join("\n")) }
-		
-# 		clique_data = ["clique_id,exons"]
-# 		cliques.each_with_index do |clique, clique_index|
-# 			clique_data << "С#{clique_index}, #{clique.join(',')}"
-# 		end
-# 		File.open("#{self.file_path}_cliques.csv", "w") { |file| file.write(clique_data.join("\n")) }
+    def find_cliques
+      p = Set.new(graph.keys)
+      r = Set.new()
+      x = Set.new()
+      degeneracy_ordering(graph).each do |vert|
+        neighs = graph[vert]
+        find_cliques_pivot(graph, r.union([vert]), p.intersection(neighs), x.intersection(neighs))
+        p -= [vert]
+        x += [vert]
+      end
+      return self.cliques.map(&:to_a)
+    end
 
-# 	end
+    def degeneracy_ordering(graph)
+      ordering = []
+      ordering_set = Set.new()
+      degrees = Hash.new(0)
+      degen = Hash.new {|hsh, key| hsh[key] = [] }
+      max_deg = -1
+      graph.keys.each do |vert|
+        deg = graph[vert].length
+        degen[deg] << vert
+        degrees[vert] = deg
+        if deg > max_deg
+          max_deg = deg
+        end
+      end
+      while true
+        i = 0
+        while i <= max_deg
+          if degen[i].length != 0
+            break
+          end
+          i += 1
+        end
+        break if i > max_deg
+        v = degen[i].pop
+        ordering << v
+        ordering_set.add(v)
+        graph[v].each do |w|
+          if !ordering_set.include?(w)
+            deg = degrees[w]
+            degen[deg].delete(w)
+            if deg > 0
+              degrees[w] -= 1
+              degen[deg-1] << w
+            end
+          end
+        end
+      end
+      return ordering.reverse
+    end
 
-# private
-	
-# 	def construct_graph
-# 		graph = {}
-# 		self.organisms.each do |organism|
-# 			organism.exons.each { |exon| graph[exon.uuid] = exon.connections.map(&:uuid) }
-# 		end
-# 		return graph
-# 	end
+    def find_cliques_pivot(graph, r, p, x)
+      if ((p.length == 0) & (x.length == 0))
+        self.cliques << r
+      else
+        u = p.union(x).first
+        p.difference(graph[u]).each do |v|
+          neighs = graph[v]
+          find_cliques_pivot(graph, r.union([v]), p.intersection(neighs), x.intersection(neighs))
+          p.delete(v)
+          x.add(v)
+        end
+      end
+    end
+end
 
-# 	def kerbosh(current, candidates, excluded, graph, result = [])
-# 		result << current if candidates.empty? && excluded.empty?
-# 		#sorted_candidates = candidates.sort { |a,b| graph[a].length <=> graph[b].length }
-# 		current_candidates = candidates
-# 		candidates.each do |vertex|
-# 			result += kerbosh(current + [vertex], current_candidates & graph[vertex], excluded & graph[vertex], graph)
-# 			current_candidates = current_candidates[1..-1]
-# 			excluded << vertex
-# 		end
-# 		return result
-# 	end
 
-# 	def mark_exons_in_clique(cliques)
-# 		exons_hash = get_exons_hash
-# 		cliques.each_with_index do |clique, index|
-# 			clique.each do |exon_uuid|
-# 				exons_hash[exon_uuid].cliques += [index]
-# 			end
-# 		end
-# 	end
+class CliqueFinder
 
-# 	def get_exons_hash
-# 		graph = {}
-# 		self.organisms.each do |organism|
-# 			organism.exons.each { |exon| graph[exon.uuid] = exon }
-# 		end
-# 		return graph
-# 	end
+  attr_accessor :graph
+  attr_accessor :cliques
+  attr_accessor :prime_exon
 
-# end
+  def initialize(exon)
+    self.graph = {}
+    self.prime_exon = exon
+  end
+
+  def make_graph
+    add_exon_to_graph(self.prime_exon)  
+  end
+
+  def make_cliques
+    ker = Kerbosh.new(self.graph)
+    self.cliques = ker.find_cliques
+  end
+
+private
+
+  def add_exon_to_graph(exon)
+    graph[exon.uuid] = exon.connections.select(&:green?).map(&:uuid)
+    exon.connections.select(&:green?).each do |connect|
+      add_exon_to_graph(connect) unless graph.keys.include?(connect.uuid)
+    end
+  end
+
+  def print_graph
+    puts "#{graph}"
+  end
+
+end
