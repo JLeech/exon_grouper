@@ -12,6 +12,7 @@ class Exon
 	attr_accessor :r_maxes
 	attr_accessor :local_length_coef_maxes
 	attr_accessor :min_local_lengths
+	attr_accessor :matching_letters
 
 	attr_accessor :organism_index
 	attr_accessor :exon_index
@@ -26,7 +27,7 @@ class Exon
 		self.allignement = allignement
 		self.connections = []
 #		self.real_connections = []
-		self.group = [-1]
+		self.group = []
 		self.uuid = (organism_index+1)*100 + exon_index + 1
 		# self.cliques = []
 		self.organism_index = organism_index
@@ -35,6 +36,7 @@ class Exon
 		self.r_maxes = Hash.new {|hsh, key| hsh[key] = [] }
 		self.local_length_coef_maxes = Hash.new {|hsh, key| hsh[key] = [] }
 		self.min_local_lengths = Hash.new {|hsh, key| hsh[key] = [] }
+		self.matching_letters = Hash.new {|hsh, key| hsh[key] = [] }
 	end
 
 	def include?(exon, match_persent)
@@ -87,6 +89,14 @@ class Exon
 		max_score = 0.0
 		allignement.split("").each { |char| max_score += blossum[char][char] }
 		return max_score
+	end
+
+	def alignement_no_gap_length
+		counter = 0.0
+		self.allignement.each_char do |char|
+			counter += 1 if char != "-"
+		end
+		return counter
 	end
 
 	# def has_local_overlap?
@@ -169,6 +179,10 @@ class Exon
 
 	def get_unique_groups
 		return self.group.uniq
+	end
+
+	def not_grouped?
+		return group.empty?
 	end
 
 private

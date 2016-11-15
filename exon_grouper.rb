@@ -36,7 +36,8 @@ class ExonGrouper
   def prepare_data
     # отбираются только первые self.organism_number организмов
     all_organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare
-    self.organisms = all_organisms[0..(self.organism_number-1)]
+    #self.organisms = all_organisms[0..(self.organism_number-1)]
+    self.organisms = [all_organisms[0],all_organisms[2],all_organisms[3],all_organisms[4],all_organisms[8],all_organisms[9]]
     clear_output_file
   end
 
@@ -69,66 +70,114 @@ class ExonGrouper
     ExonMatcher.clear_output_file(output_filename)
     pair_counter = 0
     self.organisms.each_with_index do |organism, index|
-    puts "#{index} : #{organism.name}"
-    break if index+1 == self.organisms.length
-    self.organisms[(index+1)..-1].each do |match_organism|
-      organism.exons.each_with_index do |exon, organism_exon_index|
-      exon_includes = false # флаг того, вложен ли экзон в кого-то
-      connection_found = false
-      match_organism.exons.each_with_index do |match_exon, match_organism_index|
-        # проверяем вложен ли экзон, с учётом процента совпадения из options
-        if exon.include?(match_exon, self.percent)
-        sequences = [exon.allignement, match_exon.allignement]
-        coords = [] << exon.get_coords << match_exon.get_coords
-        sequences_data = {pair_id: get_pair_id(pair_counter),
-                  org_name: organism.name,
-                  exon_index: exon.uuid,
-                  match_org_name: match_organism.name,
-                  match_exon_index: match_exon.uuid,
-                  }
-        exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix,
-                         organism, match_organism, exon, match_exon)
-        exon_matcher.count_everything
-        set_exon_coefs(exon, match_exon, exon_matcher)
-        borders = get_borders(exon_matcher, exon, match_exon, sequences_data)
-        File.open("#{self.output_filename}_borders.csv", 'a') { |file| file.write(borders) }
-        if ([exon_matcher.rloc_1, exon_matcher.rloc_2].max > 0.3)
-          exon_includes = true
-            exon.connections << match_exon
-            match_exon.connections << exon
-          connection_found = true
-          exon.local_borders << [exon_matcher.local_data['start_position_1'], exon_matcher.local_data['end_position_1']]
-          match_exon.local_borders << [exon_matcher.local_data['start_position_2'], exon_matcher.local_data['end_position_2']]
-          File.open("#{self.output_filename}_graph_borders.csv", 'a') { |file| file.write(borders) }
-        end
-        exon_matcher.print_for_csv(output_filename)
-        exon_matcher.print_statistics_for_txt(output_filename)
-        pair_counter += 1
-        
-        elsif exon_includes
-        break
+      puts "#{index} : #{organism.name}"
+      break if index+1 == self.organisms.length
+      self.organisms[(index+1)..-1].each do |match_organism|
+        organism.exons.each_with_index do |exon, organism_exon_index|
+          exon_includes = false # флаг того, вложен ли экзон в кого-то
+          match_organism.exons.each_with_index do |match_exon, match_organism_index|
+            # проверяем вложен ли экзон, с учётом процента совпадения из options
+            if exon.include?(match_exon, self.percent)
+              sequences = [exon.allignement, match_exon.allignement]
+              coords = [] << exon.get_coords << match_exon.get_coords
+              sequences_data = {pair_id: get_pair_id(pair_counter),
+                        org_name: organism.name,
+                        exon_index: exon.uuid,
+                        match_org_name: match_organism.name,
+                        match_exon_index: match_exon.uuid,
+                        }
+              exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix,
+                               organism, match_organism, exon, match_exon)
+              exon_matcher.count_everything
+              borders = get_borders(exon_matcher, exon, match_exon, sequences_data)
+              File.open("#{self.output_filename}_borders.csv", 'a') { |file| file.write(borders) }
+              if ([exon_matcher.rloc_1, exon_matcher.rloc_2].max > 0.2)
+                exon_includes = true
+                exon.connections << match_exon
+                match_exon.connections << exon
+                set_exon_coefs(exon, match_exon, exon_matcher)
+                exon.local_borders << [exon_matcher.local_data['start_position_1'], exon_matcher.local_data['end_position_1']]
+                match_exon.local_borders << [exon_matcher.local_data['start_position_2'], exon_matcher.local_data['end_position_2']]
+                File.open("#{self.output_filename}_graph_borders.csv", 'a') { |file| file.write(borders) }
+              end
+              exon_matcher.print_for_csv(output_filename)
+              exon_matcher.print_statistics_for_txt(output_filename)
+              pair_counter += 1
+            
+            elsif exon_includes
+              break
+            end
+          end
         end
       end
-      end
-    end
     end
     puts "pairs: #{pair_counter}"
   end
 
   def make_groups(exons)
     group = group_green(exons)
-    group = group_blue(exons, group)
-    self.max_group = group
+    #group = group_blue(exons, group)
+    #self.max_group = group
   end
 
   def group_green(exons)
+    # group = 0
+    # exons.each do |exon|
+    #   if exon.not_grouped? && exon.green?
+    #     exon.group = [group]
+    #     group += 1
+    #     # проходим по всем вложенным, и проставляем им группу текущего
+    #     set_groups_for_connected(exon)
+    #   end
+    # end
+    # return group
+
     group = 0
-    exons.each do |exon|
-      if exon.group.include?(-1) && exon.green?
-        exon.group = [group]
-        group += 1
-        # проходим по всем вложенным, и проставляем им группу текущего
-        set_groups_for_connected(exon)
+    exon_org = 0
+    exons.each_with_index do |exon, index|
+      #exon_org = exon.organism_index if index == 0
+      #break if exon.organism_index != exon_org
+      if exon.green?
+        neighbours = {}
+        possibles = []
+        green_connections = []
+        exon.connections.each { |connected| green_connections << connected if connected.green? }
+
+        green_connections.each do |connected|
+          neighbours[connected.uuid] = connected
+        end
+        
+        green_connections.each do |connected|
+          connected.connections.each do |far_neighbour|
+            unless neighbours[far_neighbour.uuid].nil?
+              possibles << far_neighbour if far_neighbour.green?
+            end
+          end
+        end
+        neighbours[exon.uuid] = exon
+        possibles << exon
+        puts "E: #{exon.uuid}"
+        puts "N: #{neighbours.keys}"
+        clique_ids = possibles.map { |pos| pos.connections.map(&:uuid)+[pos.uuid] }.inject(&:&)
+        puts "I: #{clique_ids}"
+        if clique_ids.nil?
+          exon.group << [-99]
+          next
+        end
+        clique = []
+        clique_ids.each { |id| clique << neighbours[id]}
+        clique.compact!
+        next if clique.length < 2
+        puts "G: #{clique.map { |pos| pos.group }}"
+        common_group = (clique.map { |pos| pos.group }).inject(&:&)
+        if common_group.empty?
+          clique.each { |pos| pos.group << group}
+          clique.each { |pos| pos.group.uniq}
+          exon.group << group
+          exon.group.uniq
+          group += 1
+        end
+        puts "------------"
       end
     end
     return group
@@ -136,7 +185,7 @@ class ExonGrouper
 
   def group_blue(exons, group)
     exons.each do |exon|
-      if exon.group.include?(-1) && exon.blue?
+      if exon.not_grouped? && exon.blue?
         group = set_blue_group(exon, group)
       end
     end
@@ -150,12 +199,17 @@ class ExonGrouper
     unless connected_hash.keys.empty?
       puts "--------------------------------------------"
       puts "#{connected_hash.keys}"
-      puts "#{connected_hash.max_by{|k,v| v.length}[1].length-1}"
+      puts "#{connected_hash.max_by{|k,v| v.length}[1].length-1}[0.0]"
+      puts "Matching letters: #{exon.matching_letters.values.inject(Hash.new(0)) { |total, e| total[e] += 1 ;total}}"
+      # if exon.matching_letters.values.inject(Hash.new(0)) { |total, e| total[e] += 1 ;total}[0.0] > exon.matching_letters.values.length/3.0
+      #   exon.group = [group]
+      #   return group+1
+      # end
       while current_column < connected_hash.max_by{|k,v| v.length}[1].length 
         connected_hash.keys.each do |key|
           if connected_hash[key].length > current_column
             cur_exon = connected_hash[key][current_column]
-            trusted_exons << cur_exon if cur_exon.green?
+            trusted_exons << cur_exon if ((cur_exon.green?) && (exon.matching_letters[key][current_column] > 0.0) )
           end
         end
         groups = Hash.new {|hsh, key| hsh[key] = 0 }  
@@ -172,15 +226,16 @@ class ExonGrouper
 
         trusted_exons.each do |trusted|
           groups[trusted.group[0]] += 1
-        end   
+        end
+        puts "TRUSTED: #{trusted_exons.map(&:uuid)}"
         puts "#{exon.uuid}"
         puts "#{groups}"
         puts "========"
         trusted_group = groups.max_by{|k,v| v}
-        if exon.group.include?(-1) 
+        if exon.not_grouped? 
           exon.group = [trusted_group[0]]
         else
-          exon.group << trusted_group[0]
+          exon.group = (exon.group + [trusted_group[0]]).uniq
         end
         current_column += 1
         trusted_exons = []
@@ -191,27 +246,60 @@ class ExonGrouper
 
   def set_groups_for_connected(exon)
     exon.connections.each do |connected|
-      connected.group = exon.group if connected.green?
+      if connected.green?
+        if connected.not_grouped?
+          connected.group = exon.group
+        else
+          connected.group = (connected.group + exon.group).uniq
+        end 
+      end
     end
+  end
+
+  # def make_groups(exons)
+  #   max_length = organisms.map(&:allignement_length).max
+  #   current_group = 0
+  #   (0..max_length).each do |position|
+  #     current_exons = get_exons_for(position, exons)
+  #     current_group = group_exons(current_exons, current_group)
+  #   end
+
+  # end
+
+  def get_exons_for(position, exons)
+    in_coords = []
+    exons.each do |exon|
+      if (exon.start >= position) & (exon.finish <= position)
+        in_coords << exon
+      end
+    end
+    return in_coords
+  end
+
+  def group_exons(exons, group)
+
   end
 
   def set_exon_coefs(exon, match_exon, exon_matcher)
     rloc_max = [exon_matcher.rloc_1, exon_matcher.rloc_2].max
     local_length_coef_max = [ exon_matcher.local_data["local_length_1_coef"], exon_matcher.local_data["local_length_2_coef"] ].max
     min_local_length = [ exon_matcher.local_data["raw_length_1"], exon_matcher.local_data["raw_length_2"] ].min
+    matching_letters_length_coef = [exon_matcher.matching_letters/exon.alignement_no_gap_length,exon_matcher.matching_letters/match_exon.alignement_no_gap_length].max
     exon.min_local_lengths[match_exon.organism_index] << min_local_length
     exon.r_maxes[match_exon.organism_index] << rloc_max
     exon.local_length_coef_maxes[match_exon.organism_index] << local_length_coef_max
+    exon.matching_letters[match_exon.organism_index] << matching_letters_length_coef
 
     match_exon.min_local_lengths[exon.organism_index] << min_local_length
     match_exon.r_maxes[exon.organism_index] << rloc_max
     match_exon.local_length_coef_maxes[exon.organism_index] << local_length_coef_max
+    match_exon.matching_letters[exon.organism_index] << matching_letters_length_coef
   end
 
   def draw_as_svg_rectangels(data_to_show)
     svg_width = self.organisms.first.allignement_length*2 + 200
     svg_height = self.organisms.count * 40 + 40
-    output_file_name = path_to_allignement.split('/').last.split("_").first + "_#{data_to_show}"
+    output_file_name = self.output_filename + "_#{data_to_show}"
     File.open("#{output_file_name}.svg", 'w') do |file|
       file.write("<svg width=\"#{svg_width+100}\" height=\"#{svg_height}\">")
       file.write("<rect x=\"0\" y=\"0\" width=\"#{svg_width+100}\" height=\"#{svg_height}\" style=\"fill:white;\" />")
@@ -284,7 +372,7 @@ private
     color = exon.get_svg_color
     file.write("<rect x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords-15}\" width=\"#{width*2}\" height=\"30\" style=\"fill:#{color};stroke:black;stroke-width:1\" />\n")
     #file.write("<text x=\"#{(exon.start+x_start_coords)*2+10}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.start}:#{exon.finish})</text>")
-    file.write("<text x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords}\" fill=\"black\">(#{data_to_show})</text>")
+    file.write("<text x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords}\" fill=\"black\">#{data_to_show}</text>")
   end
 
 end

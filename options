@@ -17,7 +17,8 @@ percent = 90
 output = csv
 
 # output filename
-output_filename = results/result_dscam
+#output_filename = results/result_dscam
+output_filename = results/result_tenm
 #output_filename = results/result_mdga
 
 # number of organisms for constructing groups
