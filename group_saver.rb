@@ -1,66 +1,57 @@
-# require_relative "exon.rb"
-# require_relative "organism.rb"
+require_relative "exon.rb"
+require_relative "organism.rb"
 
-# class GroupSaver
+class GroupSaver
 
-# 	attr_accessor :organisms
-# 	attr_accessor :exons_pointers
-# 	attr_accessor :organisms_strings
-# 	attr_accessor :output_filename
+	attr_accessor :organisms
+	attr_accessor :output_filename
 
 
-# 	def initialize (organisms, output_filename)
-# 		self.organisms = organisms
-# 		self.exons_pointers = Array.new(organisms.length) { |i| i = 0 }
-# 		self.organisms_strings = Array.new(organisms.length) { |i| i = "" }
-# 		self.output_filename = output_filename
-# 	end
+	def initialize (organisms, output_filename)
+		self.organisms = organisms
+		self.output_filename = output_filename
+	end
 
-# 	def save_to_csv
-# 		# неоптимально
-# 		while true	
-# 			group_number = get_next_group_number
-# 			break if group_number < 0
-# 			exon_per_group = Array.new(self.organisms.length) { |i| i = 0 }
-# 			self.organisms.each_with_index do |organism, index|
-# 				exon_per_group[index] = organism.exons.select { |exon| exon.group == group_number }.length
-# 			end
-# 			max_elems_in_group = exon_per_group.max
-# 			exon_per_group.each_with_index do |exon_number, organism_index|
-# 				self.organisms_strings[organism_index] += "#{group_number},"*exon_number + ","*(max_elems_in_group - exon_number) + ","
-# 				self.exons_pointers[organism_index] += exon_number
-# 			end
-# 		end
-# 		File.write("#{output_filename}_groups.csv", self.organisms_strings.join("\n") )
-# 	end
+	def save_to_csv
+		save_org_exon
+		save_org_clique
+	end
 
+	def save_org_exon
+		max_exons_length = organisms.map(&:exons).map(&:length).max-1
+		lines =  ["org name\\exon index;" + (0..max_exons_length).to_a.join(";")]
+		organisms.each do |org|
+			lines << org.name + ";" + org.exons.map(&:group).map{ |ex| ex.join(",") }.join(";")
+		end
+		File.write("#{output_filename}_org_exon_groups.csv", lines.join("\n") )
+	end
 
-# private
+	def save_org_clique
+		max_clique_num = organisms.map(&:exons).flatten.map(&:group).flatten.max
+		lines = []
+		organisms.each do |org|
+			lines << org.name + ";"
+		end
+		org_clique_arr = []
+		organisms.each_with_index do |org, index|
+			cliques = Hash.new(0)
+			org.exons.map(&:group).flatten.each do |group|
+				cliques[group] += 1
+			end
+			org_clique_arr[index] = cliques
+		end
 
-# 	def get_next_group_number
-# 		left_exons = []
-# 		self.exons_pointers.each_with_index do |exon_position, index|
-# 			exon = self.organisms[index].exons[exon_position]
-# 			next if exon.nil?
-# 			left_exons << exon
-# 		end
-# 		return -1 if left_exons.compact.empty?
-# 		exon_coords = left_exons.map(&:start)
-# 		exon_groups = left_exons.map(&:group)
-# 		#exon_mean = left_exons.map(&:finish).inject(:+).to_f / left_exons.size
-# 		left_exon_group = left_exons[ exon_coords.index(exon_coords.min) ].group
-		
-# 		not_left_exons_for_group = left_exons.select { |exon| exon.group != left_exon_group }
-# 		left_exons_for_group = left_exons.select { |exon| exon.group == left_exon_group }
-# 		exon_mean = left_exons_for_group.map(&:finish).inject(:+).to_f / left_exons_for_group.size
-# 		out_group = left_exon_group
-# 		not_left_exons_for_group.each do |exon|
-# 			if exon.finish < exon_mean
-# 				out_group = exon.group
-# 				break
-# 			end
-# 		end
-# 		return out_group
-# 	end
+		(0..max_clique_num).to_a.each do |clique_number|
+			org_clique_arr.each_with_index do |org, index|
+				exons_in_clique = org[clique_number]
+				lines[index] += "#{exons_in_clique};"
+			end
+		end
+		lines = ["org name\\clique index;" + (0..max_clique_num).to_a.join(";")] + lines
+		File.write("#{output_filename}_exons_in_cliques_count.csv", lines.join("\n") )
 
-# end
+	end
+
+private
+
+end

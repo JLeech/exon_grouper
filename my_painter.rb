@@ -68,7 +68,7 @@ puts "Grouping: #{time3 - time1}"
 	#exon_grouper.print_group_count_as_csv
 #end
 
-#exon_grouper.print_groups_to_csv
+exon_grouper.print_groups_to_csv
 #exon_grouper.make_cliques
 time4 = Time.now
 puts "Cliques: #{time4 - time1}"

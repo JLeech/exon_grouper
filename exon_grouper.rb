@@ -122,8 +122,6 @@ class ExonGrouper
     end
     
     group = group_green(exons)
-    #group = group_blue(exons, group)
-    #self.max_group = group
   end
 
   def group_green(exons)
@@ -147,104 +145,6 @@ class ExonGrouper
       group += 1
     end
     return group
-  end
-
-
-  def group_blue(exons, group)
-    exons.each do |exon|
-      if exon.not_grouped? && exon.blue?
-        group = set_blue_group(exon, group)
-      end
-    end
-    return group
-  end
-
-  def set_blue_group(exon, group)
-    connected_hash = exon.get_connected_hash
-    trusted_exons = []
-    current_column = 0
-    unless connected_hash.keys.empty?
-      puts "--------------------------------------------"
-      puts "#{connected_hash.keys}"
-      puts "#{connected_hash.max_by{|k,v| v.length}[1].length-1}[0.0]"
-      puts "Matching letters: #{exon.matching_letters.values.inject(Hash.new(0)) { |total, e| total[e] += 1 ;total}}"
-      # if exon.matching_letters.values.inject(Hash.new(0)) { |total, e| total[e] += 1 ;total}[0.0] > exon.matching_letters.values.length/3.0
-      #   exon.group = [group]
-      #   return group+1
-      # end
-      while current_column < connected_hash.max_by{|k,v| v.length}[1].length 
-        connected_hash.keys.each do |key|
-          if connected_hash[key].length > current_column
-            cur_exon = connected_hash[key][current_column]
-            trusted_exons << cur_exon if ((cur_exon.green?) && (exon.matching_letters[key][current_column] > 0.0) )
-          end
-        end
-        groups = Hash.new {|hsh, key| hsh[key] = 0 }  
-
-        # если он стоит отдельно и нет никаких зелёных. обработать случай отдельно
-        if trusted_exons.empty?
-          puts "empty"
-          return group
-        end
-        #if trusted_exons.length < exon.connections.length/3.0 
-          #exon.group = [group + 1]
-          #return group
-        #end
-
-        trusted_exons.each do |trusted|
-          groups[trusted.group[0]] += 1
-        end
-        puts "TRUSTED: #{trusted_exons.map(&:uuid)}"
-        puts "#{exon.uuid}"
-        puts "#{groups}"
-        puts "========"
-        trusted_group = groups.max_by{|k,v| v}
-        if exon.not_grouped? 
-          exon.group = [trusted_group[0]]
-        else
-          exon.group = (exon.group + [trusted_group[0]]).uniq
-        end
-        current_column += 1
-        trusted_exons = []
-      end
-    end
-    return group
-  end
-
-  def set_groups_for_connected(exon)
-    exon.connections.each do |connected|
-      if connected.green?
-        if connected.not_grouped?
-          connected.group = exon.group
-        else
-          connected.group = (connected.group + exon.group).uniq
-        end 
-      end
-    end
-  end
-
-  # def make_groups(exons)
-  #   max_length = organisms.map(&:allignement_length).max
-  #   current_group = 0
-  #   (0..max_length).each do |position|
-  #     current_exons = get_exons_for(position, exons)
-  #     current_group = group_exons(current_exons, current_group)
-  #   end
-
-  # end
-
-  def get_exons_for(position, exons)
-    in_coords = []
-    exons.each do |exon|
-      if (exon.start >= position) & (exon.finish <= position)
-        in_coords << exon
-      end
-    end
-    return in_coords
-  end
-
-  def group_exons(exons, group)
-
   end
 
   def set_exon_coefs(exon, match_exon, exon_matcher)
@@ -287,17 +187,6 @@ class ExonGrouper
     group_saver = GroupSaver.new(self.organisms, output_filename)
     group_saver.save_to_csv
   end
-
-  # def reallocate_connections
-  #   self.organisms.each do |organism|
-  #     organism.exons.each do |exon|
-  #       next if exon.connections.empty?
-  #       first_connected_exon = exon.connections[0]
-  #       exon.connections = exon.connections.delete_if { |conn| conn.organism_index == first_connected_exon.organism_index }
-  #       first_connected_exon.connections = first_connected_exon.connections.delete_if { |conn| conn.organism_index == exon.organism_index }
-  #     end
-  #   end
-  # end
   
   def get_borders(aligner, exon, match_exon, sequence_data)
     data1 = [exon.uuid, match_exon.uuid, sequence_data[:pair_id],aligner.local_data['start_position_1'],aligner.local_data['end_position_1'],aligner.local_data['start_position_2'],aligner.local_data['end_position_2']]
