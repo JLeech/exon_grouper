@@ -1,10 +1,11 @@
 require "csv"
 require "json"
+require "set"
 
 require_relative "exon.rb"
 require_relative "organism.rb"
 require_relative "data_processor"
-require_relative "exon_matcher.rb"
+require_relative "exon_concat_matcher.rb"
 require_relative "group_saver.rb"
 require_relative "clique_finder.rb"
 
@@ -47,29 +48,56 @@ class ExonGrouper
     time1 = Time.now
     exons = []
     # создаются связи между экзонами (какие вложены в какие)
-    make_connections
-    # reallocate_connections
-    self.organisms.each do |organism|
-      exons += organism.exons
-    end
-    time2 = Time.now
-    puts "making connections: #{time2 - time1}"
-    #нумеруются группы вложенности
-    make_groups(exons)
-    time3 = Time.now
-    puts "making groups: #{time3 - time2}"
+    count_concat_statistics
+    # make_connections
+    # # reallocate_connections
+    # self.organisms.each do |organism|
+    #   exons += organism.exons
+    # end
+    # time2 = Time.now
+    # puts "making connections: #{time2 - time1}"
+    # #нумеруются группы вложенности
+    # make_groups(exons)
+    # time3 = Time.now
+    # puts "making groups: #{time3 - time2}"
     
   end
 
-  # def make_cliques
-  #     clique_finder = CliqueFinder.new(self.organisms, output_filename)
-  #     clique_finder.find_cliques
-  #     clique_finder.print_cliques
-  # end
+  def count_concat_statistics
+    ExonConcatMatcher.csv_header(output_filename)
+    ExonConcatMatcher.clear_output_file(output_filename)
+    pair_counter = 0
+    self.organisms.each_with_index do |organism, index|
+      puts "#{index} : #{organism.name}"
+      organism.exons.each do |exon|
+        selected_organisms = self.organisms.dup
+        selected_organisms.delete_at(index)
+        selected_organisms.each do |match_organism|
+          selected = select_exons(match_organism, exon.get_coords)
+          sequences = [exon.allignement, selected.map(&:allignement).join("UU")]
+          next if selected.empty?
+          coords = [] << exon.get_coords << [selected[0].start, selected[-1].finish]
+          sequences_data = {
+            pair_id: get_pair_id(pair_counter),
+            org_name: organism.name,
+            exon_index: exon.uuid,
+            match_org_name: match_organism.name,
+            match_exon_index: selected.map(&:uuid).join(",")
+          }
+          exon_matcher = ExonConcatMatcher.new(sequences, coords, sequences_data, blossum_matrix,
+                 organism, match_organism, exon, nil)
+          exon_matcher.count_everything
+          exon_matcher.print_for_csv(output_filename)
+          exon_matcher.print_statistics_for_txt(output_filename)
+          pair_counter += 1
+        end
+      end
+    end
+  end
 
   def make_connections
-    ExonMatcher.csv_header(output_filename)
-    ExonMatcher.clear_output_file(output_filename)
+    ExonConcatMatcher.csv_header(output_filename)
+    ExonConcatMatcher.clear_output_file(output_filename)
     pair_counter = 0
     self.organisms.each_with_index do |organism, index|
       puts "#{index} : #{organism.name}"
@@ -88,7 +116,7 @@ class ExonGrouper
                         match_org_name: match_organism.name,
                         match_exon_index: match_exon.uuid,
                         }
-              exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix,
+              exon_matcher = ExonConcatMatcher.new(sequences, coords, sequences_data, blossum_matrix,
                                organism, match_organism, exon, match_exon)
               exon_matcher.count_everything
               borders = get_borders(exon_matcher, exon, match_exon, sequences_data)
@@ -114,6 +142,18 @@ class ExonGrouper
       end
     end
     puts "pairs: #{pair_counter}"
+  end
+
+  def select_exons(match_organism, coords)
+    selected_exons = []
+    match_organism.exons.each do |exon|
+      if (exon.finish >= coords[0]) & (exon.finish <= coords[1])
+        selected_exons << exon
+      elsif (exon.finish >= coords[1]) & (exon.start <= coords[1])
+        selected_exons << exon
+      end
+    end
+    return selected_exons
   end
 
   def make_groups(exons)
@@ -177,6 +217,7 @@ class ExonGrouper
           draw_exon_box(index, exon, file, exon.send(data_to_show))
         end
       end
+      draw_exon_limits(file, svg_height)
       file.write("</svg>")
     end
     puts "exon number : #{organisms.map{ |org| org.exons.length }.inject(:+)}"
@@ -194,6 +235,18 @@ class ExonGrouper
     data2 = [match_exon.uuid, exon.uuid, sequence_data[:pair_id],aligner.local_data['start_position_2'],aligner.local_data['end_position_2'],aligner.local_data['start_position_1'],aligner.local_data['end_position_1']]
     data2 = data2.join(",") + "\n"
     return data1+data2
+  end
+
+  def draw_exon_limits(file, svg_height)
+    starts = Set.new
+    finish = Set.new
+    exons = self.organisms.map(&:exons).flatten
+    exons.each do |exon|
+      starts.add(exon.start)
+      finish.add(exon.finish)
+    end
+    starts.each { |st| draw_border_line(st, "rgb(232, 18, 18)", file, svg_height) }
+    finish.each { |fn| draw_border_line(fn, "rgb(18, 18, 232)", file, svg_height) }
   end
 
 private
@@ -219,6 +272,10 @@ private
     x_start_coords = 100
     x_end_coords = svg_width - 100
     file.write("<line x1=\"#{x_start_coords}\" y1=\"#{y_coords}\" x2=\"#{x_end_coords}\" y2=\"#{y_coords}\" style=\"stroke:rgb(0,0,0);stroke-width:1\" />")
+  end
+
+  def draw_border_line(x_start, color, file, svg_height)
+    file.write("<line x1=\"#{(x_start + 100)*2}\" y1=\"0\" x2=\"#{(x_start + 100)*2}\" y2=\"#{svg_height}\" style=\"stroke:#{color};stroke-width:1\" />")
   end
 
   def draw_exon_box(index, exon, file, data_to_show)
