@@ -73,5 +73,5 @@ puts "Grouping: #{time3 - time1}"
 time4 = Time.now
 puts "Cliques: #{time4 - time1}"
 #exon_grouper.draw_as_svg_rectangels("get_unique_groups")
-#exon_grouper.draw_as_svg_rectangels("uuid")
+exon_grouper.draw_as_svg_rectangels("uuid")
 #exon_grouper.print_groups_coords

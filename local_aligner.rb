@@ -87,7 +87,7 @@ class LocalAligner
 			"align_2" => aligned_2,
 			"score" => count_score(aligned_1, aligned_2),
 			"margined_al_1" => margin_al_1,
-			"margined_al_2" => margin_al_2
+			"margined_al_2" => margin_al_2,
 		  }
 		return results
 	end
@@ -104,6 +104,7 @@ class LocalAligner
 		local_length_coef = ([length_1,length_2].min.to_f)/([length_1,length_2].max.to_f)
 		local_score_1_coef = results["score"]/score_1.to_f
 		local_score_2_coef = results["score"]/score_2.to_f
+
 		formatted_result = {
 			"start_position_1" => start_position_1,
 			"end_position_1" => end_position_1,
@@ -122,9 +123,7 @@ class LocalAligner
 			"local_score_2_coef" => local_score_2_coef,
 			"align_1" => results["margined_al_1"], #results["align_1"],
 			"align_2" => results["margined_al_2"], #results["align_2"],
-			"local_min" => [local_score_1_coef,local_score_2_coef].min,
-			"raw_length_1" => length_1,
-			"raw_length_2" => length_2
+			"local_min" => [local_score_1_coef,local_score_2_coef].min
 		}
 		return formatted_result
 	end

@@ -40,6 +40,11 @@ class ExonConcatMatcher
     attr_accessor :exon
     attr_accessor :match_exon
 
+    attr_accessor :nExCat
+    attr_accessor :firstEx2
+    attr_accessor :lastEx2
+    attr_accessor :concat_data 
+
     def initialize(sequences = [], coords = [], sequence_data = {}, blosum = nil, organism, match_organism, exon, match_exon)
         self.blosum = blosum.nil? ? DataProcessor.parse_blossum : blosum
         self.sequences = sequences
@@ -62,6 +67,8 @@ class ExonConcatMatcher
         self.match_organism = match_organism
         self.exon = exon
         self.match_exon = match_exon
+        extract_data_from_sequence_data(sequence_data)
+        self.concat_data = {}
     end
 
     def count_everything(params = {})
@@ -73,6 +80,7 @@ class ExonConcatMatcher
         self.local_data = LocalAligner.new(self.seq_1, self.seq_2, self.blosum).align
         self.rloc_1 = self.local_data["local_score"].to_f/self.seq_1_score.to_f
         self.rloc_2 = self.local_data["local_score"].to_f/self.seq_2_score.to_f
+        self.concat_data = get_concat_data
     end
 
     def parse_seq
@@ -199,8 +207,39 @@ class ExonConcatMatcher
 
         #puts organism.allignement[self.coords_1[0]..self.coords_1[1]]
         #puts self.seq_2
-
     end
+
+    def extract_data_from_sequence_data(sequence_data)
+        concatted_exons = sequence_data[:concatted_exons]
+        self.nExCat = concatted_exons.length
+        self.firstEx2 = concatted_exons.first.uuid
+        self.lastEx2 = concatted_exons.last.uuid
+    end
+
+  def get_concat_data
+      counter = 0
+      data = {"counter"=> 0,
+              "first_domain_index"=> "", 
+              "last_domain_index" => "",
+              "first_coverage_per" => "",
+              "last_coverage_per" => ""
+            }
+      parts = self.local_data["align_2"].split("UU").map { |part| part.split("uu") }.flatten
+      vals = parts.map { |part| part.chars.map(&:ord).map { |place| place <= 90  } } #90 = "Z"
+      has_uppercase = vals.map { |part| part.uniq.include?(true) }
+      data["counter"] = has_uppercase.count(true)
+      return data if data["counter"] == 0
+      first_domain_pre_index = has_uppercase.index(true)
+      data["first_domain_index"] = self.sequence_data[:concatted_exons][first_domain_pre_index].uuid
+      last_domain_pre_index = has_uppercase.length - has_uppercase.reverse.index(true)-1
+      data["last_domain_index"] = self.sequence_data[:concatted_exons][last_domain_pre_index].uuid
+
+      upper_count_first = vals[first_domain_pre_index].count(true)
+      data["first_coverage_per"] = upper_count_first/vals[first_domain_pre_index].length.to_f*100
+      upper_count_last = vals[last_domain_pre_index].count(true)
+      data["last_coverage_per"] = upper_count_last/vals[last_domain_pre_index].length.to_f*100
+      return data
+  end
 
     def print_for_csv(output_filename)
         exon_1_length = self.exon_1.allignement.gsub("-","").length
@@ -218,6 +257,14 @@ class ExonConcatMatcher
                 self.coords_2[0],
                 self.coords_2[1],
                 exon_2_length,
+                self.nExCat,
+                self.firstEx2,
+                self.lastEx2,
+                self.concat_data["counter"],
+                self.concat_data["first_domain_index"],
+                self.concat_data["last_domain_index"],
+                self.concat_data["first_coverage_per"],
+                self.concat_data["last_coverage_per"],
                 self.seq_2_score.to_f.round(2),
                 self.affine_score,
                 self.usual_score,
@@ -263,11 +310,19 @@ class ExonConcatMatcher
                   "Leng1",
                   "Ex1_Sc",
                   "Spec2",
-                  "Ex2",
+                  "ConcatEx",
                   "Start2",
                   "End2",
                   "Leng2",
-                  "Ex2_Sc",
+                  "NExCat",
+                  "1stEx2",
+                  "LastEx2",
+                  "Dom2NEx",
+                  "1stExDom",
+                  "LastExDom",
+                  "Cover1st",
+                  "CoverLast",
+                  "ConcatEx_Sc",
                   "Aff_sc",
                   "Mono_sc",
                   "Add_sp",
@@ -303,9 +358,9 @@ class ExonConcatMatcher
                         "local_score_1_coef",
                         "local_score_2_coef",
                         "align_1",
-                        "align_2"]
+                        "align_2",
+                        "local_min",]
             combined_values = [
-                "local_min",
                 "RLoc_1",
                 "RLoc_2",
                 "Rmin",

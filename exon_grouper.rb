@@ -70,9 +70,8 @@ class ExonGrouper
     self.organisms.each_with_index do |organism, index|
       puts "#{index} : #{organism.name}"
       organism.exons.each do |exon|
-        selected_organisms = self.organisms.dup
-        selected_organisms.delete_at(index)
-        selected_organisms.each do |match_organism|
+        organisms.each_with_index do |match_organism, match_index|
+          next if match_index == index
           selected = select_exons(match_organism, exon.get_coords)
           sequences = [exon.allignement, selected.map(&:allignement).join("UU")]
           next if selected.empty?
@@ -82,7 +81,8 @@ class ExonGrouper
             org_name: organism.name,
             exon_index: exon.uuid,
             match_org_name: match_organism.name,
-            match_exon_index: selected.map(&:uuid).join(",")
+            match_exon_index: selected.map(&:uuid).join(","),
+            concatted_exons: selected
           }
           exon_matcher = ExonConcatMatcher.new(sequences, coords, sequences_data, blossum_matrix,
                  organism, match_organism, exon, nil)
