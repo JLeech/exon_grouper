@@ -6,6 +6,7 @@ require_relative "exon.rb"
 require_relative "organism.rb"
 require_relative "data_processor"
 require_relative "exon_concat_matcher.rb"
+require_relative "cat_cat_matcher.rb"
 require_relative "group_saver.rb"
 require_relative "clique_finder.rb"
 
@@ -40,7 +41,7 @@ class ExonGrouper
     # отбираются только первые self.organism_number организмов
     all_organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare
     self.organisms = all_organisms[0..(self.organism_number-1)]
-    #self.organisms = [all_organisms[0],all_organisms[2],all_organisms[3],all_organisms[4],all_organisms[8],all_organisms[9]]
+    #self.organisms = [all_organisms[0],all_organisms[4]]
     clear_output_file
   end
 
@@ -48,7 +49,8 @@ class ExonGrouper
     time1 = Time.now
     exons = []
     # создаются связи между экзонами (какие вложены в какие)
-    count_concat_statistics
+    #count_concat_statistics
+    count_cat_cat_statistics
     # make_connections
     # # reallocate_connections
     # self.organisms.each do |organism|
@@ -63,14 +65,77 @@ class ExonGrouper
     
   end
 
+  def count_cat_cat_statistics
+    CatCatMatcher.csv_header(output_filename)
+    CatCatMatcher.clear_output_file(output_filename)
+    pair_counter = 0
+    self.organisms.each_with_index do |organism, index|
+      break if index+1 == self.organisms.length
+      self.organisms[(index+1)..-1].each do |match_organism|
+        splits = get_cat_cat_splits(organism, match_organism)
+
+        splits["organism"].each_with_index do |org_part, part_index|
+          coords = part_index == 0 ? [0, splits["coords"][0]] : [splits["coords"][part_index-1]+2, splits["coords"][part_index]]
+          if part_index == (splits["organism"].length-1)
+            coords = [splits["coords"][part_index-1], splits["coords"][part_index-1] + splits["organism"][-1].length + 2 ]
+          end
+          match_org_part = splits["match_organism"][part_index]
+          sequences = [org_part, match_org_part]
+          cat_cat_proxy = CatCatProxy.new(sequences, coords, self.blossum_matrix, organism, match_organism, get_pair_id(pair_counter))
+          cat_cat_matcher = CatCatMatcher.new(cat_cat_proxy)
+          cat_cat_matcher.count_statistics
+        end
+      end
+
+
+
+      break
+    end
+  end
+
+  def get_cat_cat_splits(organism, match_organism)
+    organism_coords = get_uu_coords(organism)
+    match_organism_coords = get_uu_coords(match_organism)
+    match_coords = organism_coords & match_organism_coords
+    #exon_distribution = { "ex_dist_organism" => get_exon_dist(organism_coords,match_coords),
+    #                      "ex_dist_match_organism" => get_exon_dist(match_organism_coords,match_coords)}
+    organism_parts = []
+    match_organism_parts = []
+    match_coords.each_with_index do |coord, index|
+      if index == 0
+        organism_parts << organism.allignement[0..(coord-1)]#.gsub("UU","--")
+        match_organism_parts << match_organism.allignement[0..(coord-1)]#.gsub("UU","--")
+        next
+      end
+      organism_parts << organism.allignement[(match_coords[index-1]+2)..(coord-1)]#.gsub("UU","--")
+      match_organism_parts << match_organism.allignement[(match_coords[index-1]+2)..(coord-1)]#.gsub("UU","--")
+    end
+    if match_coords.length > 0
+      organism_parts << organism.allignement[(match_coords[-1]+2)..(-1)]#.gsub("UU","--")
+      match_organism_parts << match_organism.allignement[(match_coords[-1]+2)..(-1)]#.gsub("UU","--")
+    end
+    return ({"coords" => match_coords, "organism" => organism_parts, "match_organism" => match_organism_parts})
+  end
+
+  def get_uu_coords(organism)
+    i = -1
+    all = []
+    while i = organism.allignement.index('UU', i+1)
+      all << i
+    end
+    return all
+  end
+
   def count_concat_statistics
     ExonConcatMatcher.csv_header(output_filename)
     ExonConcatMatcher.clear_output_file(output_filename)
     pair_counter = 0
+    time1 = Time.now
     self.organisms.each_with_index do |organism, index|
       puts "#{index} : #{organism.name}"
       organism.exons.each do |exon|
         organisms.each_with_index do |match_organism, match_index|
+          time3 = Time.now
           next if match_index == index
           selected = select_exons(match_organism, exon.get_coords)
           sequences = [exon.allignement, selected.map(&:allignement).join("UU")]
@@ -90,14 +155,18 @@ class ExonGrouper
           exon_matcher.print_for_csv(output_filename)
           exon_matcher.print_statistics_for_txt(output_filename)
           pair_counter += 1
+          time4 = Time.now
+          print "#{(time4-time3).round(2)} | "
         end
       end
+      time2 = Time.now
+      puts "Total org: #{time2-time1}"
     end
   end
 
   def make_connections
-    ExonConcatMatcher.csv_header(output_filename)
-    ExonConcatMatcher.clear_output_file(output_filename)
+    ExonMatcher.csv_header(output_filename)
+    ExonMatcher.clear_output_file(output_filename)
     pair_counter = 0
     self.organisms.each_with_index do |organism, index|
       puts "#{index} : #{organism.name}"
@@ -116,7 +185,7 @@ class ExonGrouper
                         match_org_name: match_organism.name,
                         match_exon_index: match_exon.uuid,
                         }
-              exon_matcher = ExonConcatMatcher.new(sequences, coords, sequences_data, blossum_matrix,
+              exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix,
                                organism, match_organism, exon, match_exon)
               exon_matcher.count_everything
               borders = get_borders(exon_matcher, exon, match_exon, sequences_data)
@@ -259,7 +328,7 @@ private
   end
 
   def get_pair_id(number)
-    return "A"+"0"*(5-number.to_s.length) + number.to_s
+    return "A"+"0"*(10-number.to_s.length) + number.to_s
   end
 
   def print_organism_name(organism, index, file)
