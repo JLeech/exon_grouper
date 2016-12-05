@@ -25,6 +25,60 @@ class Matrix
   
 end
 
+class LocalResult
+
+  attr_accessor :start_positions
+  attr_accessor :end_positions
+  attr_accessor :align_1
+  attr_accessor :align_2
+  attr_accessor :score
+
+  def initialize(results)
+    self.start_positions = results["start_positions"]
+    self.end_positions = results["end_positions"]
+    self.align_1 = results["align_1"]
+    self.align_2 = results["align_2"]
+    self.score = results["score"]
+  end
+
+  def from_start_1?
+    return start_1 == 0
+  end
+
+  def from_start_2?
+    return start_2 == 0
+  end
+
+  def till_end_1?(seq)
+    return end_1 == (seq.length-1)
+  end
+
+  def till_end_2?(seq)
+    return end_2 == (seq.length-1)    
+  end
+
+  def start_1
+    return self.start_positions[0]
+  end
+
+  def start_2
+    return self.start_positions[1]
+  end
+
+  def end_1
+    return self.end_positions[0]
+  end
+
+  def end_2
+    return self.end_positions[1]
+  end
+
+  def aligns
+    return [align_1, align_2]
+  end
+
+end
+
 class CatCatLocalAligner
 
   attr_accessor :seq_1
@@ -42,8 +96,7 @@ class CatCatLocalAligner
   def align
     alignement_matrix = Matrix.zero(self.seq_1.length+1,self.seq_2.length+1)
     alignement_matrix, back_ways = fill_matrix(alignement_matrix)
-    res = make_back_way(alignement_matrix, back_ways)
-    return res
+    return LocalResult.new(make_back_way(alignement_matrix, back_ways))
   end
 
   def fill_matrix(matrix)
@@ -80,15 +133,42 @@ class CatCatLocalAligner
       max_position = [max_position,current_way].transpose.map {|x| x.reduce(:+)}
     end
     start_positions = max_position
-    #margin_al_1, margin_al_2 = margin_allignements(start_positions, end_positions, aligned_1.reverse, aligned_2.reverse)
+    align_1 = aligned_1.reverse
+    align_2 = aligned_2.reverse
     results = { 
       "start_positions" => start_positions,
       "end_positions" => end_positions,
-      "align_1" => aligned_1.reverse,
-      "align_2" => aligned_2.reverse,
+      "align_1" => align_1,
+      "align_2" => align_2,
+      "score" => count_score(align_1, align_2)
       }
     return results
   end
 
+  def count_score(str_1, str_2)
+    result = 0
+    start_gap = true
+    str_1.chars.each_with_index do |char, index|
+      if char == "-" || str_2[index] == "-"
+        if start_gap
+          blosum_value = self.blosum["A"]["-"]
+          start_gap = false
+        else
+          blosum_value = -2
+        end 
+      else
+
+        blosum_value = self.blosum[char]
+        start_gap = true
+      end
+      if !blosum_value.nil?
+        result += self.blosum[char][str_2[index]] 
+      else
+        result += self.blosum["A"]["-"]
+      end
+
+    end
+    return result
+  end
 
 end

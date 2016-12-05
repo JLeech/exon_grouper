@@ -45,7 +45,11 @@ class CatCatResult
   attr_accessor :seq_1_score
   attr_accessor :seq_2_score
 
-  attr_accessor :local_data
+  attr_accessor :local_score
+  attr_accessor :local_seq_1
+  attr_accessor :local_seq_2
+  attr_accessor :local_self_1_score
+  attr_accessor :local_self_2_score
 
   def initialize
     self.added_spaces = 0
@@ -60,6 +64,12 @@ class CatCatResult
 
     self.seq_1_score = 0
     self.seq_2_score = 0
+
+    self.local_score = 0
+    self.local_seq_1 = ""
+    self.local_seq_2 = ""
+    self.local_self_1_score = 0
+    self.local_self_2_score = 0
   end
 
   def check
@@ -82,6 +92,64 @@ class CatCatResult
     puts "#{seq_2_score}"
   end
 
+  def save(file_path, proxy)
+    aff_seq_1 = (self.affine_score/self.seq_1_score.to_f).round(2)
+    aff_seq_2 = (self.affine_score/self.seq_2_score.to_f).round(2)
+    rloc_1 = self.local_score/aff_seq_1
+    rloc_2 = self.local_score/aff_seq_2
+    data = [
+      proxy.pair_id,
+      proxy.organism.name,
+      proxy.match_organism.name,
+      proxy.coords[0],
+      proxy.coords[1],
+      proxy.coords[1]-proxy.coords[0],
+      self.seq_1_score,
+      self.seq_2_score,
+      self.usual_score,
+      self.affine_score,
+      aff_seq_1,
+      aff_seq_2,
+      [aff_seq_1, aff_seq_2].min,
+      "",
+      "",
+      (self.affine_score.to_f/[seq_1_score, seq_2_score].max).round(2)
+    ]
+    puts self.affine_score
+    #local values
+    data += [
+      self.local_score,
+      self.local_score.to_f/self.affine_score,
+      self.local_self_1_score,
+      self.local_self_2_score,
+      self.local_score.to_f/[self.local_self_1_score,self.local_self_2_score].max,
+      self.local_score/self.local_self_1_score.to_f,
+      self.local_score/self.local_self_2_score.to_f,
+      "",
+      "",
+      [self.local_self_1_score, self.local_self_2_score].min.to_f,
+      rloc_1,
+      rloc_2,
+      [rloc_1,rloc_2].min,
+      [rloc_1,rloc_2].max,
+    ]
+    CSV.open("#{file_path}.csv", "a") { |csv| csv << data}
+    save_allignement(file_path, proxy)
+  end
+
+  def save_allignement(file_path, proxy)
+    output = ""
+    output += "#{proxy.pair_id} #{proxy.coords}\n"
+    output += "\"#{proxy.seq_1}\"\n\"#{proxy.seq_2}\"\n"
+    File.open("#{file_path}_allignements.txt", 'a') { |file| file.write(output) }
+
+    output = ""
+    output += "#{proxy.pair_id} #{proxy.coords}\n"
+    output += "\"#{self.local_seq_1}\"\n\"#{self.local_seq_2}\"\n"
+    File.open("#{file_path}_local_allignements.txt", 'a') { |file| file.write(output) }
+  end
+
+
 end
 
 class CatCatMatcher
@@ -98,20 +166,73 @@ class CatCatMatcher
     cat_cat_result.affine_score, cat_cat_result.usual_score = count_blosum(cat_cat_proxy.seq_1, cat_cat_proxy.seq_2, true)
     cat_cat_result.seq_1_score, _ = count_blosum(cat_cat_proxy.seq_1, cat_cat_proxy.seq_1)
     cat_cat_result.seq_2_score, _ = count_blosum(cat_cat_proxy.seq_2, cat_cat_proxy.seq_2)
-    #cat_cat_result.local_data = LocalAligner.new(cat_cat_proxy.seq_1, cat_cat_proxy.seq_2, cat_cat_proxy.blosum).align
-    make_local_recursive
+    make_local
     cat_cat_result.check
   end
 
-  def make_local_recursive
-    no_gap_seq_1 = cat_cat_proxy.seq_1.gsub("-","")
-    no_gap_seq_2 = cat_cat_proxy.seq_2.gsub("-","")
-    local_data = CatCatLocalAligner.new(no_gap_seq_1, no_gap_seq_2, cat_cat_proxy.blosum).align
-    puts "#{cat_cat_proxy.seq_1}"
-    puts "#{cat_cat_proxy.seq_2}"
-    puts "#{local_data['align_1']}"
-    puts "#{local_data['align_2']}"
-    puts "--------------------------"
+  def make_local
+    no_gap_seq_1 = cat_cat_proxy.seq_1.gsub("-","").gsub("U","")
+    no_gap_seq_2 = cat_cat_proxy.seq_2.gsub("-","").gsub("U","")
+    locals = local_recursive(no_gap_seq_1, no_gap_seq_2)
+    local_1 = ""
+    local_2 = ""
+    locals.each do |local_split|
+      local_1 += local_split[0]
+      local_2 += local_split[1]
+    end
+    cat_cat_result.local_seq_1 = local_1
+    cat_cat_result.local_seq_2 = local_2
+    cat_cat_result.local_score, _ = count_blosum(local_1, local_2)
+    cat_cat_result.local_self_1_score, _ = count_blosum(local_1, local_1)
+    cat_cat_result.local_self_2_score, _ = count_blosum(local_2, local_2)
+    # puts "#{self.cat_cat_result.usual_score} : #{self.cat_cat_result.affine_score}"
+    # puts "#{blos_loc}"
+    # puts ""
+    # puts "#{cat_cat_proxy.seq_1}"
+    # puts "#{cat_cat_proxy.seq_2}"
+    # puts "L1"
+    # puts "#{local_1}"
+    # puts "L2"
+    # puts "#{local_2}"
+    # puts "\n-----------\n"
+  end
+
+  def local_recursive(seq_1, seq_2, len_coef = 1.0)
+    if stop_results?(seq_1, seq_2, len_coef)
+      return [margin(seq_1,seq_2)]
+    end
+    local_result = CatCatLocalAligner.new(seq_1, seq_2, cat_cat_proxy.blosum).align
+    min_seq_length = [seq_1, seq_2].map(&:length).min.to_f
+    left_part_1 = ""
+    left_part_2 = ""
+    right_part_1 = seq_1[(local_result.end_1+1)..(-1)]
+    right_part_2 = seq_2[(local_result.end_2+1)..(-1)]
+    if local_result.start_1 > 0
+      left_part_1 = seq_1[0..(local_result.start_1-1)]
+    end
+    if local_result.start_2 > 0
+      left_part_2 = seq_2[0..(local_result.start_2-1)]
+    end
+    left_length_coef = [left_part_1,left_part_2].map(&:length).min.to_f/min_seq_length
+    right_length_coef = [right_part_1,right_part_2].map(&:length).min.to_f/min_seq_length
+    final = local_recursive(left_part_1,left_part_2,left_length_coef) + [[local_result.align_1, local_result.align_2]] + local_recursive(right_part_1,right_part_2,right_length_coef)
+    return final
+  end
+
+  def stop_results?(seq_1, seq_2, len_coef)
+    if (len_coef < 0.2) || (seq_1.length < 5) || (seq_2.length < 5)
+      return true
+    end
+    return false
+  end
+
+  def margin(seq_1, seq_2)
+    if seq_1.length > seq_2.length
+      seq_2 += "-"*(seq_1.length-seq_2.length)
+    elsif seq_1.length < seq_2.length
+      seq_1 += "-"*(seq_2.length-seq_1.length)
+    end
+    return [seq_1, seq_2]
   end
 
   def count_blosum(main_allignement, matching_allignement, global = false)
@@ -132,8 +253,8 @@ class CatCatMatcher
         else
           current_deletion_1 += 1 if seq_1_char == "-"
           current_deletion_2 += 1 if seq_2_char == "-"
-          current_affine_score += start_gap_flag ? -9 : -2
-          current_usual_score += -9
+          current_affine_score += start_gap_flag ? -4 : -2
+          current_usual_score += -4
         end
       else
         start_gap_flag = true
@@ -157,6 +278,10 @@ class CatCatMatcher
     return [current_affine_score, current_usual_score]
   end
 
+  def save_to_csv(output_csv)
+    self.cat_cat_result.save(output_csv, cat_cat_proxy)
+  end
+
   def self.clear_output_file(output_filename)
     File.write("#{output_filename}_allignements.txt", '')
     File.write("#{output_filename}_local_allignements.txt", '')
@@ -166,49 +291,26 @@ class CatCatMatcher
     CSV.open("#{output_csv}.csv", "w") do |csv|
       header = ["pair_id",
               "Spec1",
-              "Ex1",
-              "Start1",
-              "End1",
-              "Leng1",
-              "Ex1_Sc",
               "Spec2",
-              "Ex2",
-              "Start2",
-              "End2",
-              "Leng2",
+              "Start",
+              "End",
+              "Leng",
+              "Ex1_Sc",
               "Ex2_Sc",
-              "Aff_sc",
               "Mono_sc",
-              "Add_sp",
-              "Match_sp",
-              "Match",
-              "MisM",
-              "Del1",
-              "Del2",
-              "Inters",
+              "Aff_sc",
               "Aff_Seq1",
               "Aff_Seq2",
               "Min_aff_seq_score",
-              "Leng_Min_Max",
-              "Per_id1",
-              "Per_id2",
               "Align1",
               "Align2",
               "Normed_aff_score"
             ]
-      header += [ "start_position_1",
-                  "end_position_1",
-                  "right_margin_1",
-                  "start_position_2",
-                  "end_position_2",
-                  "right_margin_2",
-                  "local_score",
+      header += [ "local_score",
+                  "local_aff_coef",
                   "local_score_1",
                   "local_score_2",
                   "local_score_coef",
-                  "local_length_coef",
-                  "local_length_1_coef",
-                  "local_length_2_coef",
                   "local_score_1_coef",
                   "local_score_2_coef",
                   "align_1",

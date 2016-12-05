@@ -84,6 +84,8 @@ class ExonGrouper
           cat_cat_proxy = CatCatProxy.new(sequences, coords, self.blossum_matrix, organism, match_organism, get_pair_id(pair_counter))
           cat_cat_matcher = CatCatMatcher.new(cat_cat_proxy)
           cat_cat_matcher.count_statistics
+          cat_cat_matcher.save_to_csv(output_filename)
+          pair_counter += 1
         end
       end
 
