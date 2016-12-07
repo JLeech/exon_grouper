@@ -41,7 +41,7 @@ class ExonGrouper
     # отбираются только первые self.organism_number организмов
     all_organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare
     self.organisms = all_organisms[0..(self.organism_number-1)]
-    #self.organisms = [all_organisms[0],all_organisms[4]]
+    #self.organisms = [all_organisms[4],all_organisms[5]]
     clear_output_file
   end
 
@@ -70,10 +70,11 @@ class ExonGrouper
     CatCatMatcher.clear_output_file(output_filename)
     pair_counter = 0
     self.organisms.each_with_index do |organism, index|
+      puts "ORG: #{organism.name}"
       break if index+1 == self.organisms.length
       self.organisms[(index+1)..-1].each do |match_organism|
         splits = get_cat_cat_splits(organism, match_organism)
-
+        puts "  -> #{match_organism.name}"
         splits["organism"].each_with_index do |org_part, part_index|
           coords = part_index == 0 ? [0, splits["coords"][0]] : [splits["coords"][part_index-1]+2, splits["coords"][part_index]]
           if part_index == (splits["organism"].length-1)
@@ -88,10 +89,6 @@ class ExonGrouper
           pair_counter += 1
         end
       end
-
-
-
-      break
     end
   end
 

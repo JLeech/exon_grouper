@@ -80,23 +80,23 @@ class CatCatResult
   end
 
   def print
-    puts "#{added_spaces}"
-    puts "#{matching_spaces}"
-    puts "#{matching_letters}"
-    puts "#{mismatching_letters}"
-    puts "#{affine_score}"
-    puts "#{usual_score}"
-    puts "#{deletions_1}"
-    puts "#{deletions_2}"
-    puts "#{seq_1_score}"
-    puts "#{seq_2_score}"
+    puts ": #{added_spaces}"
+    puts ": #{matching_spaces}"
+    puts ": #{matching_letters}"
+    puts ": #{mismatching_letters}"
+    puts ": #{affine_score}"
+    puts ": #{usual_score}"
+    puts ": #{deletions_1}"
+    puts ": #{deletions_2}"
+    puts ": #{seq_1_score}"
+    puts ": #{seq_2_score}"
   end
 
   def save(file_path, proxy)
     aff_seq_1 = (self.affine_score/self.seq_1_score.to_f).round(2)
     aff_seq_2 = (self.affine_score/self.seq_2_score.to_f).round(2)
-    rloc_1 = self.local_score/aff_seq_1
-    rloc_2 = self.local_score/aff_seq_2
+    rloc_1 = (self.local_score+0.01)/aff_seq_1.to_f
+    rloc_2 = (self.local_score+0.01)/aff_seq_2.to_f
     data = [
       proxy.pair_id,
       proxy.organism.name,
@@ -115,11 +115,11 @@ class CatCatResult
       "",
       (self.affine_score.to_f/[seq_1_score, seq_2_score].max).round(2)
     ]
-    puts self.affine_score
+    #puts self.affine_score
     #local values
     data += [
       self.local_score,
-      self.local_score.to_f/self.affine_score,
+      self.local_score.to_f-self.affine_score,
       self.local_self_1_score,
       self.local_self_2_score,
       self.local_score.to_f/[self.local_self_1_score,self.local_self_2_score].max,
@@ -163,7 +163,7 @@ class CatCatMatcher
   end
 
   def count_statistics
-    cat_cat_result.affine_score, cat_cat_result.usual_score = count_blosum(cat_cat_proxy.seq_1, cat_cat_proxy.seq_2, true)
+    cat_cat_result.affine_score, cat_cat_result.usual_score = count_blosum(cat_cat_proxy.seq_1.gsub("U","-"), cat_cat_proxy.seq_2.gsub("U","-"), true)
     cat_cat_result.seq_1_score, _ = count_blosum(cat_cat_proxy.seq_1, cat_cat_proxy.seq_1)
     cat_cat_result.seq_2_score, _ = count_blosum(cat_cat_proxy.seq_2, cat_cat_proxy.seq_2)
     make_local
@@ -307,7 +307,7 @@ class CatCatMatcher
               "Normed_aff_score"
             ]
       header += [ "local_score",
-                  "local_aff_coef",
+                  "local_aff_diff",
                   "local_score_1",
                   "local_score_2",
                   "local_score_coef",
