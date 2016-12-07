@@ -163,7 +163,7 @@ class CatCatMatcher
   end
 
   def count_statistics
-    cat_cat_result.affine_score, cat_cat_result.usual_score = count_blosum(cat_cat_proxy.seq_1.gsub("U","-"), cat_cat_proxy.seq_2.gsub("U","-"), true)
+    cat_cat_result.affine_score, cat_cat_result.usual_score = count_blosum(cat_cat_proxy.seq_1, cat_cat_proxy.seq_2, true)
     cat_cat_result.seq_1_score, _ = count_blosum(cat_cat_proxy.seq_1, cat_cat_proxy.seq_1)
     cat_cat_result.seq_2_score, _ = count_blosum(cat_cat_proxy.seq_2, cat_cat_proxy.seq_2)
     make_local
@@ -171,8 +171,8 @@ class CatCatMatcher
   end
 
   def make_local
-    no_gap_seq_1 = cat_cat_proxy.seq_1.gsub("-","").gsub("U","")
-    no_gap_seq_2 = cat_cat_proxy.seq_2.gsub("-","").gsub("U","")
+    no_gap_seq_1 = cat_cat_proxy.seq_1.gsub("-","")
+    no_gap_seq_2 = cat_cat_proxy.seq_2.gsub("-","")
     locals = local_recursive(no_gap_seq_1, no_gap_seq_2)
     local_1 = ""
     local_2 = ""
@@ -215,7 +215,7 @@ class CatCatMatcher
     end
     left_length_coef = [left_part_1,left_part_2].map(&:length).min.to_f/min_seq_length
     right_length_coef = [right_part_1,right_part_2].map(&:length).min.to_f/min_seq_length
-    final = local_recursive(left_part_1,left_part_2,left_length_coef) + [[local_result.align_1, local_result.align_2]] + local_recursive(right_part_1,right_part_2,right_length_coef)
+    final = local_recursive(left_part_1,left_part_2,left_length_coef) + [["+#{local_result.align_1}+", "+#{local_result.align_2}+"]] + local_recursive(right_part_1,right_part_2,right_length_coef)
     return final
   end
 
@@ -232,7 +232,7 @@ class CatCatMatcher
     elsif seq_1.length < seq_2.length
       seq_1 += "-"*(seq_2.length-seq_1.length)
     end
-    return [seq_1, seq_2]
+    return ["|"+seq_1+"|", "|"+seq_2+"|"]
   end
 
   def count_blosum(main_allignement, matching_allignement, global = false)

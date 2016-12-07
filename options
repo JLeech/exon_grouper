@@ -25,4 +25,4 @@ output_filename = results/result_dscam
 #output_filename = results/result_mdga
 
 # number of organisms for constructing groups
-organism_number = 20
+organism_number = 10
