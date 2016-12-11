@@ -62,33 +62,61 @@ class ExonGrouper
     # make_groups(exons)
     # time3 = Time.now
     # puts "making groups: #{time3 - time2}"
-    
   end
 
   def count_cat_cat_statistics
     CatCatMatcher.csv_header(output_filename)
     CatCatMatcher.clear_output_file(output_filename)
     pair_counter = 0
+    local_borders = Hash.new { |hash, key| hash[key] = Array.new() }
     self.organisms.each_with_index do |organism, index|
       puts "ORG: #{organism.name}"
       break if index+1 == self.organisms.length
       self.organisms[(index+1)..-1].each do |match_organism|
         splits = get_cat_cat_splits(organism, match_organism)
         puts "  -> #{match_organism.name}"
+        current_split_offset = 0
         splits["organism"].each_with_index do |org_part, part_index|
           coords = part_index == 0 ? [0, splits["coords"][0]] : [splits["coords"][part_index-1]+2, splits["coords"][part_index]]
           if part_index == (splits["organism"].length-1)
             coords = [splits["coords"][part_index-1], splits["coords"][part_index-1] + splits["organism"][-1].length + 2 ]
           end
           match_org_part = splits["match_organism"][part_index]
+          current_split_offset += org_part.length
           sequences = [org_part, match_org_part]
           cat_cat_proxy = CatCatProxy.new(sequences, coords, self.blossum_matrix, organism, match_organism, get_pair_id(pair_counter))
           cat_cat_matcher = CatCatMatcher.new(cat_cat_proxy)
           cat_cat_matcher.count_statistics
           cat_cat_matcher.save_to_csv(output_filename)
+          puts "O : #{org_part}"
+          puts "M : #{match_org_part}"
+          puts "\n"
+          puts "#{cat_cat_matcher.cat_cat_result.local_seq_1}"
+          puts "#{cat_cat_matcher.cat_cat_result.local_seq_2}"
+          puts "LB: #{cat_cat_matcher.cat_cat_result.local_borders_seq_1}"
+          puts "LB: #{cat_cat_matcher.cat_cat_result.local_borders_seq_2}"
+          seq_1_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_1
+          seq_2_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_2
+          res_1 = "C : "
+          seq_1_bord.each_slice(2) do |slice|
+            res_1 += "#{org_part[slice[0]..(slice[1]-1)]}+"
+          end
+          puts res_1
+
+          res_2 = "C : "
+          seq_2_bord.each_slice(2) do |slice|
+            res_2 += "#{match_org_part[slice[0]..(slice[1]-1)]}+"
+          end
+          puts res_2
+          puts "---------------"
+
+          #local_borders[organism.name] << cat_cat_matcher.cat_cat_result.local_borders_seq_1.map { |x| x+current_split_offset }
+          #local_borders[match_organism.name] << cat_cat_matcher.cat_cat_result.local_borders_seq_2.map { |x| x+current_split_offset }
           pair_counter += 1
         end
       end
+      border_data = "#{organism.name}\n#{organism.allignement}\n#{local_borders[organism.name]}\n"
+      File.open("#{self.output_filename}_borders.txt", 'a') { |file| file.write(border_data) }
     end
   end
 
@@ -321,9 +349,9 @@ private
 
   def clear_output_file
     header = "ex1,ex2,pair_id,st1,end1,st2,end2\n"
-    File.open("#{self.output_filename}_borders.csv", 'w') { |file| file.write(header) }
+    File.open("#{self.output_filename}_borders.txt", 'w') { |file| file.write(header) }
     header = "ex1,ex2,pair_id,st1,end1,st2,end2\n"
-    File.open("#{self.output_filename}_graph_borders.csv", 'w') { |file| file.write(header) }
+    File.open("#{self.output_filename}_graph_borders.txt", 'w') { |file| file.write(header) }
   end
 
   def get_pair_id(number)

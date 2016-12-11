@@ -51,6 +51,9 @@ class CatCatResult
   attr_accessor :local_self_1_score
   attr_accessor :local_self_2_score
 
+  attr_accessor :local_borders_seq_1
+  attr_accessor :local_borders_seq_2
+
   def initialize
     self.added_spaces = 0
     self.matching_spaces = 0
@@ -70,6 +73,9 @@ class CatCatResult
     self.local_seq_2 = ""
     self.local_self_1_score = 0
     self.local_self_2_score = 0
+
+    self.local_borders_seq_1 = []
+    self.local_borders_seq_2 = []
   end
 
   def check
@@ -185,6 +191,10 @@ class CatCatMatcher
     cat_cat_result.local_score, _ = count_blosum(local_1, local_2)
     cat_cat_result.local_self_1_score, _ = count_blosum(local_1, local_1)
     cat_cat_result.local_self_2_score, _ = count_blosum(local_2, local_2)
+    cat_cat_result.local_borders_seq_1 = get_local_borders(local_1, cat_cat_proxy.seq_1)
+    cat_cat_result.local_borders_seq_2 = get_local_borders(local_2, cat_cat_proxy.seq_2)
+    raise "local borders error" if cat_cat_result.local_borders_seq_1.length%2 != 0
+    raise "local borders error" if cat_cat_result.local_borders_seq_2.length%2 != 0
     # puts "#{self.cat_cat_result.usual_score} : #{self.cat_cat_result.affine_score}"
     # puts "#{blos_loc}"
     # puts ""
@@ -215,7 +225,12 @@ class CatCatMatcher
     end
     left_length_coef = [left_part_1,left_part_2].map(&:length).min.to_f/min_seq_length
     right_length_coef = [right_part_1,right_part_2].map(&:length).min.to_f/min_seq_length
-    final = local_recursive(left_part_1,left_part_2,left_length_coef) + [["+#{local_result.align_1}+", "+#{local_result.align_2}+"]] + local_recursive(right_part_1,right_part_2,right_length_coef)
+    final = ""
+    if (local_result.align_1.length < 5) || (local_result.align_2.length < 5)
+      final = [margin(seq_1, seq_2)] 
+    else
+      final = local_recursive(left_part_1,left_part_2,left_length_coef) + [["+#{local_result.align_1}+", "+#{local_result.align_2}+"]] + local_recursive(right_part_1,right_part_2,right_length_coef)
+    end
     return final
   end
 
@@ -276,6 +291,50 @@ class CatCatMatcher
       self.cat_cat_result.mismatching_letters = current_mismatching_letters
     end
     return [current_affine_score, current_usual_score]
+  end
+
+  def get_local_borders(local, seq)
+    local_borders = []
+    good_part = 0
+    bad_part = 0
+    marked = false
+    seq_index = 0
+    local.each_char.with_index do |char, index|
+      if char == "|"
+        bad_part = (bad_part+1)%2
+        marked = false
+        next
+      end
+      if char == "+"
+        good_part = (good_part+1)%2
+        marked = false
+        local_borders << seq_index  if good_part == 0
+        next
+      end
+      if char == "-"
+        while seq[seq_index] == "-"
+          seq_index += 1
+        end
+        next
+      end
+      if char != "-"
+        while seq[seq_index] == "-"
+          seq_index += 1
+        end
+        if char == seq[seq_index]
+          if (!marked) && (good_part == 1)
+            local_borders << seq_index
+            marked = true
+          end
+          seq_index += 1
+          next
+        end
+      end
+    end
+    # puts "L : #{local}"
+    # puts "S : #{seq}"
+    # puts "B : #{local_borders}"
+    return local_borders
   end
 
   def save_to_csv(output_csv)
