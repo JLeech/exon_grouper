@@ -10,6 +10,46 @@ require_relative "cat_cat_matcher.rb"
 require_relative "group_saver.rb"
 require_relative "clique_finder.rb"
 
+class ExonsSplitsIds
+
+  attr_accessor :organism_number
+  attr_accessor :match_organism_number
+  attr_accessor :splits
+
+  def initialize(splits, organism, match_organism)
+    self.organism_number = organism.number
+    self.match_organism_number = match_organism.number
+    self.splits = splits
+  end
+
+  def get_ids_for_organism
+    if @ids_for_organism.nil?
+      @ids_for_organism = count_ids(splits["organism"], organism_number)
+    end
+    return @ids_for_organism 
+  end
+
+  def get_ids_for_match_organism
+    if @ids_for_match_organism.nil?
+      @ids_for_match_organism = count_ids(splits["match_organism"], match_organism_number)
+    end
+    return @ids_for_match_organism
+  end
+
+  def count_ids(org_splits, org_number)
+    exon_org_ids = []
+    last_id_count = 0
+    org_splits.each do |org_split|
+      number_of_exons_in_split = org_split.split("UU").length
+      current_ids = (1..( number_of_exons_in_split )).to_a.map{ |num|  "#{ (org_number+1)*100+num+last_id_count}"  }
+      last_id_count += number_of_exons_in_split
+      exon_org_ids << current_ids
+    end
+    return exon_org_ids
+  end
+
+end
+
 class ExonGrouper
   
   attr_accessor :path_to_file
@@ -78,9 +118,11 @@ class ExonGrouper
         splits = get_cat_cat_splits(organism, match_organism)
         puts "  -> #{match_organism.name}"
         current_split_offset = 0
-        #exons_in_splits = get_exons_numbers_from_splits(splits)
+        exons_in_splits = ExonsSplitsIds.new(splits, organism, match_organism)
         splits["organism"].each_with_index do |org_part, part_index|
+
           coords = part_index == 0 ? [0, splits["coords"][0]] : [splits["coords"][part_index-1]+2, splits["coords"][part_index]]
+          
           if part_index == (splits["organism"].length-1)
             coords = [splits["coords"][part_index-1], splits["coords"][part_index-1] + splits["organism"][-1].length + 2 ]
           end
@@ -88,15 +130,16 @@ class ExonGrouper
           
           sequences = [org_part, match_org_part]
           cat_cat_proxy = CatCatProxy.new(sequences, coords, self.blossum_matrix, organism, match_organism, 
-                                          get_pair_id( part_index, organism.number, match_organism.number ))
+                                          get_pair_id( part_index, organism.number, match_organism.number ),
+                                          exons_in_splits, part_index)
           cat_cat_matcher = CatCatMatcher.new(cat_cat_proxy)
           cat_cat_matcher.count_statistics
           cat_cat_matcher.save_to_csv(output_filename)
           # puts "O : #{org_part}"
           # puts "M : #{match_org_part}"
-          puts "\n"
-          puts "#{cat_cat_matcher.cat_cat_result.local_seq_1}"
-          puts "#{cat_cat_matcher.cat_cat_result.local_seq_2}"
+          # puts "\n"
+          # puts "#{cat_cat_matcher.cat_cat_result.local_seq_1}"
+          # puts "#{cat_cat_matcher.cat_cat_result.local_seq_2}"
           seq_1_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_1
           seq_2_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_2
           
@@ -115,7 +158,7 @@ class ExonGrouper
           #   res_2 += "#{match_organism.allignement[slice[0]..(slice[1]-1)]}+"
           # end
           # puts res_2
-          puts "---------------"
+          # puts "---------------"
 
           self.local_borders[organism.name] += seq_1_bord
           self.local_borders[match_organism.name] += seq_2_bord
@@ -124,7 +167,9 @@ class ExonGrouper
         end
       end
       # puts "#{local_borders}"
-      border_data = "#{organism.name}\n#{organism.allignement}\n#{local_borders[organism.name]}\n"
+      border_data = "organism:   #{organism.name}\n"
+      border_data +="starts:     #{local_borders[organism.name].map{ |pair| pair[0] }}\n"
+      border_data +="ebds:       #{local_borders[organism.name].map{ |pair| pair[1] }}\n"
       File.open("#{self.output_filename}_borders.txt", 'a') { |file| file.write(border_data) }
     end
   end
@@ -153,6 +198,9 @@ class ExonGrouper
     return ({"coords" => match_coords, "organism" => organism_parts, "match_organism" => match_organism_parts})
   end
 
+  def get_exons_numbers_from_splits(splits)
+    exons_organism_ids = []
+  end
 
   def get_uu_coords(organism)
     i = -1

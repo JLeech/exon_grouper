@@ -10,14 +10,18 @@ class CatCatProxy
   attr_accessor :organism
   attr_accessor :match_organism
   attr_accessor :pair_id
+  attr_accessor :exons_ids
+  attr_accessor :split_index
 
-  def initialize(sequences = [], coords = [], blosum = nil, organism, match_organism, pair_id)
+  def initialize(sequences = [], coords = [], blosum = nil, organism, match_organism, pair_id, exons_ids, split_index)
     self.sequences = sequences
     self.coords = coords
     self.blosum = blosum.nil? ? DataProcessor.parse_blossum : blosum
     self.organism = organism
     self.match_organism = match_organism
     self.pair_id = pair_id
+    self.exons_ids = exons_ids
+    self.split_index = split_index
   end
 
   def seq_1
@@ -26,6 +30,14 @@ class CatCatProxy
 
   def seq_2 
     self.sequences[1]
+  end
+
+  def get_org_exons 
+    exons_ids.get_ids_for_organism[self.split_index].join(",")
+  end
+
+  def get_match_org_exons
+    exons_ids.get_ids_for_match_organism[self.split_index].join(",")
   end
 
 end
@@ -107,6 +119,8 @@ class CatCatResult
       proxy.pair_id,
       proxy.organism.name,
       proxy.match_organism.name,
+      proxy.get_org_exons,
+      proxy.get_match_org_exons,
       proxy.coords[0],
       proxy.coords[1],
       proxy.coords[1]-proxy.coords[0],
@@ -145,12 +159,12 @@ class CatCatResult
 
   def save_allignement(file_path, proxy)
     output = ""
-    output += "#{proxy.pair_id} #{proxy.coords}\n"
+    output += "#{proxy.pair_id} Coords: #{proxy.coords} Exons_1: #{proxy.get_org_exons} Exons_2: #{proxy.get_match_org_exons}\n"
     output += "\"#{proxy.seq_1}\"\n\"#{proxy.seq_2}\"\n"
     File.open("#{file_path}_allignements.txt", 'a') { |file| file.write(output) }
 
     output = ""
-    output += "#{proxy.pair_id} #{proxy.coords}\n"
+    output += "#{proxy.pair_id} #{proxy.coords} Exons_1: #{proxy.get_org_exons} Exons_2: #{proxy.get_match_org_exons}\n"
     output += "\"#{self.local_seq_1}\"\n\"#{self.local_seq_2}\"\n"
     File.open("#{file_path}_local_allignements.txt", 'a') { |file| file.write(output) }
   end
@@ -237,10 +251,6 @@ class CatCatMatcher
 
   def stop_results?(seq_1, seq_2, len_coef)
     if (len_coef < 0.2) || (seq_1.length < 5) || (seq_2.length < 5)
-      puts "#{len_coef}"
-      puts "#{seq_1}"
-      puts "#{seq_2}"
-      puts "_"
       return true
     end
     return false
@@ -356,6 +366,8 @@ class CatCatMatcher
       header = ["pair_id",
               "Spec1",
               "Spec2",
+              "exons_org_1",
+              "exons_org_2",
               "Start",
               "End",
               "Leng",

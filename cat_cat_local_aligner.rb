@@ -135,7 +135,7 @@ class CatCatLocalAligner
     start_positions = max_position
     align_1 = aligned_1.reverse
     align_2 = aligned_2.reverse
-    results = { 
+    results = {
       "start_positions" => start_positions,
       "end_positions" => end_positions,
       "align_1" => align_1,
