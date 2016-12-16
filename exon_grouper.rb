@@ -42,8 +42,8 @@ class ExonGrouper
   def prepare_data
     # отбираются только первые self.organism_number организмов
     all_organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare
-    self.organisms = all_organisms[0..(self.organism_number-1)]
-    #self.organisms = [all_organisms[4],all_organisms[5]]
+    #self.organisms = all_organisms[0..(self.organism_number-1)]
+    self.organisms = [all_organisms[0],all_organisms[4]]
     clear_output_file
   end
 
@@ -78,6 +78,7 @@ class ExonGrouper
         splits = get_cat_cat_splits(organism, match_organism)
         puts "  -> #{match_organism.name}"
         current_split_offset = 0
+        #exons_in_splits = get_exons_numbers_from_splits(splits)
         splits["organism"].each_with_index do |org_part, part_index|
           coords = part_index == 0 ? [0, splits["coords"][0]] : [splits["coords"][part_index-1]+2, splits["coords"][part_index]]
           if part_index == (splits["organism"].length-1)
@@ -86,15 +87,16 @@ class ExonGrouper
           match_org_part = splits["match_organism"][part_index]
           
           sequences = [org_part, match_org_part]
-          cat_cat_proxy = CatCatProxy.new(sequences, coords, self.blossum_matrix, organism, match_organism, get_pair_id(pair_counter))
+          cat_cat_proxy = CatCatProxy.new(sequences, coords, self.blossum_matrix, organism, match_organism, 
+                                          get_pair_id( part_index, organism.number, match_organism.number ))
           cat_cat_matcher = CatCatMatcher.new(cat_cat_proxy)
           cat_cat_matcher.count_statistics
           cat_cat_matcher.save_to_csv(output_filename)
           # puts "O : #{org_part}"
           # puts "M : #{match_org_part}"
-          # puts "\n"
-          # puts "#{cat_cat_matcher.cat_cat_result.local_seq_1}"
-          # puts "#{cat_cat_matcher.cat_cat_result.local_seq_2}"
+          puts "\n"
+          puts "#{cat_cat_matcher.cat_cat_result.local_seq_1}"
+          puts "#{cat_cat_matcher.cat_cat_result.local_seq_2}"
           seq_1_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_1
           seq_2_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_2
           
@@ -102,18 +104,18 @@ class ExonGrouper
           seq_2_bord = seq_2_bord.each_slice(2).to_a.map { |slice| slice.map{ |val| val+current_split_offset } }
           # puts "LB: #{seq_1_bord}"
           # puts "LB: #{seq_2_bord}"
-          res_1 = "C : "
-          seq_1_bord.each do |slice|
-            res_1 += "#{organism.allignement[slice[0]..(slice[1]-1)]}+"
-          end
+          # res_1 = "C : "
+          # seq_1_bord.each do |slice|
+          #   res_1 += "#{organism.allignement[slice[0]..(slice[1]-1)]}+"
+          # end
           # puts res_1
 
-          res_2 = "C : "
-          seq_2_bord.each do |slice|
-            res_2 += "#{match_organism.allignement[slice[0]..(slice[1]-1)]}+"
-          end
+          # res_2 = "C : "
+          # seq_2_bord.each do |slice|
+          #   res_2 += "#{match_organism.allignement[slice[0]..(slice[1]-1)]}+"
+          # end
           # puts res_2
-          # puts "---------------"
+          puts "---------------"
 
           self.local_borders[organism.name] += seq_1_bord
           self.local_borders[match_organism.name] += seq_2_bord
@@ -150,6 +152,7 @@ class ExonGrouper
     end
     return ({"coords" => match_coords, "organism" => organism_parts, "match_organism" => match_organism_parts})
   end
+
 
   def get_uu_coords(organism)
     i = -1
@@ -327,7 +330,7 @@ class ExonGrouper
 
 
     puts "exon number : #{organisms.map{ |org| org.exons.length }.inject(:+)}"
-    `inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
+    #`inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
   end
 
   def print_groups_to_csv
@@ -364,8 +367,10 @@ private
     File.open("#{self.output_filename}_graph_borders.txt", 'w') { |file| file.write(header) }
   end
 
-  def get_pair_id(number)
-    return "A"+"0"*(10-number.to_s.length) + number.to_s
+  def get_pair_id(number, org_num, match_org_num)
+    return "A"+"0"*(3-number.to_s.length) + number.to_s + "_" + 
+           "0"*(3-org_num.to_s.length) + org_num.to_s + "_" + 
+           "0"*(3-match_org_num.to_s.length) + match_org_num.to_s
   end
 
   def print_organism_name(organism, index, file)
@@ -389,7 +394,7 @@ private
     x_start_coords = 100
     width = exon.finish - exon.start
     color = exon.get_svg_color
-    file.write("<rect x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords-15}\" width=\"#{width*2}\" height=\"30\" style=\"fill:#{color};stroke:black;stroke-width:1\" />\n")
+    file.write("<rect x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords-15}\" width=\"#{width*2}\" height=\"30\" style=\"fill:#{color};stroke:black;stroke-width:0\" />\n")
     #file.write("<text x=\"#{(exon.start+x_start_coords)*2+10}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.start}:#{exon.finish})</text>")
     self.local_borders[organism.name].each do |borders|
       file.write("<line x1=\"#{(x_start_coords + borders[0])*2}\" y1=\"#{y_coords-18}\" x2=\"#{(x_start_coords + borders[0])*2}\" y2=\"#{y_coords+15}\" style=\"stroke:rgb(232, 18, 18);stroke-width:1\" />")

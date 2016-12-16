@@ -227,6 +227,7 @@ class CatCatMatcher
     right_length_coef = [right_part_1,right_part_2].map(&:length).min.to_f/min_seq_length
     final = ""
     if (local_result.align_1.length < 5) || (local_result.align_2.length < 5)
+      puts "final!"
       final = [margin(seq_1, seq_2)] 
     else
       final = local_recursive(left_part_1,left_part_2,left_length_coef) + [["+#{local_result.align_1}+", "+#{local_result.align_2}+"]] + local_recursive(right_part_1,right_part_2,right_length_coef)
@@ -236,6 +237,10 @@ class CatCatMatcher
 
   def stop_results?(seq_1, seq_2, len_coef)
     if (len_coef < 0.2) || (seq_1.length < 5) || (seq_2.length < 5)
+      puts "#{len_coef}"
+      puts "#{seq_1}"
+      puts "#{seq_2}"
+      puts "_"
       return true
     end
     return false
