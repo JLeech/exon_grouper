@@ -23,6 +23,7 @@ class ExonGrouper
   attr_accessor :max_group
   attr_accessor :output_filename
   attr_accessor :exons_hash
+  attr_accessor :local_borders
 
   def initialize(options = {})
 
@@ -35,6 +36,7 @@ class ExonGrouper
     self.blossum_matrix = DataProcessor.parse_blossum
     self.organisms = []
     self.exons_hash = {}
+    self.local_borders = Hash.new { |hash, key| hash[key] = Array.new() }
   end
 
   def prepare_data
@@ -68,7 +70,7 @@ class ExonGrouper
     CatCatMatcher.csv_header(output_filename)
     CatCatMatcher.clear_output_file(output_filename)
     pair_counter = 0
-    local_borders = Hash.new { |hash, key| hash[key] = Array.new() }
+    
     self.organisms.each_with_index do |organism, index|
       puts "ORG: #{organism.name}"
       break if index+1 == self.organisms.length
@@ -82,39 +84,44 @@ class ExonGrouper
             coords = [splits["coords"][part_index-1], splits["coords"][part_index-1] + splits["organism"][-1].length + 2 ]
           end
           match_org_part = splits["match_organism"][part_index]
-          current_split_offset += org_part.length
+          
           sequences = [org_part, match_org_part]
           cat_cat_proxy = CatCatProxy.new(sequences, coords, self.blossum_matrix, organism, match_organism, get_pair_id(pair_counter))
           cat_cat_matcher = CatCatMatcher.new(cat_cat_proxy)
           cat_cat_matcher.count_statistics
           cat_cat_matcher.save_to_csv(output_filename)
-          puts "O : #{org_part}"
-          puts "M : #{match_org_part}"
-          puts "\n"
-          puts "#{cat_cat_matcher.cat_cat_result.local_seq_1}"
-          puts "#{cat_cat_matcher.cat_cat_result.local_seq_2}"
-          puts "LB: #{cat_cat_matcher.cat_cat_result.local_borders_seq_1}"
-          puts "LB: #{cat_cat_matcher.cat_cat_result.local_borders_seq_2}"
+          # puts "O : #{org_part}"
+          # puts "M : #{match_org_part}"
+          # puts "\n"
+          # puts "#{cat_cat_matcher.cat_cat_result.local_seq_1}"
+          # puts "#{cat_cat_matcher.cat_cat_result.local_seq_2}"
           seq_1_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_1
           seq_2_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_2
+          
+          seq_1_bord = seq_1_bord.each_slice(2).to_a.map { |slice| slice.map{ |val| val+current_split_offset } }
+          seq_2_bord = seq_2_bord.each_slice(2).to_a.map { |slice| slice.map{ |val| val+current_split_offset } }
+          # puts "LB: #{seq_1_bord}"
+          # puts "LB: #{seq_2_bord}"
           res_1 = "C : "
-          seq_1_bord.each_slice(2) do |slice|
-            res_1 += "#{org_part[slice[0]..(slice[1]-1)]}+"
+          seq_1_bord.each do |slice|
+            res_1 += "#{organism.allignement[slice[0]..(slice[1]-1)]}+"
           end
-          puts res_1
+          # puts res_1
 
           res_2 = "C : "
-          seq_2_bord.each_slice(2) do |slice|
-            res_2 += "#{match_org_part[slice[0]..(slice[1]-1)]}+"
+          seq_2_bord.each do |slice|
+            res_2 += "#{match_organism.allignement[slice[0]..(slice[1]-1)]}+"
           end
-          puts res_2
-          puts "---------------"
+          # puts res_2
+          # puts "---------------"
 
-          #local_borders[organism.name] << cat_cat_matcher.cat_cat_result.local_borders_seq_1.map { |x| x+current_split_offset }
-          #local_borders[match_organism.name] << cat_cat_matcher.cat_cat_result.local_borders_seq_2.map { |x| x+current_split_offset }
+          self.local_borders[organism.name] += seq_1_bord
+          self.local_borders[match_organism.name] += seq_2_bord
           pair_counter += 1
+          current_split_offset += org_part.length+2
         end
       end
+      # puts "#{local_borders}"
       border_data = "#{organism.name}\n#{organism.allignement}\n#{local_borders[organism.name]}\n"
       File.open("#{self.output_filename}_borders.txt", 'a') { |file| file.write(border_data) }
     end
@@ -310,12 +317,15 @@ class ExonGrouper
         draw_organism_line(index, svg_width, file)
         print_organism_name(organism, index, file)
         organism.exons.each do |exon|
-          draw_exon_box(index, exon, file, exon.send(data_to_show))
+          draw_exon_box(organism, index, exon, file, exon.send(data_to_show))
         end
       end
-      draw_exon_limits(file, svg_height)
+      #draw_exon_limits(file, svg_height)
       file.write("</svg>")
     end
+
+
+
     puts "exon number : #{organisms.map{ |org| org.exons.length }.inject(:+)}"
     `inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
   end
@@ -374,13 +384,19 @@ private
     file.write("<line x1=\"#{(x_start + 100)*2}\" y1=\"0\" x2=\"#{(x_start + 100)*2}\" y2=\"#{svg_height}\" style=\"stroke:#{color};stroke-width:1\" />")
   end
 
-  def draw_exon_box(index, exon, file, data_to_show)
+  def draw_exon_box(organism, index, exon, file, data_to_show)
     y_coords = 40*(index+1)
     x_start_coords = 100
     width = exon.finish - exon.start
     color = exon.get_svg_color
     file.write("<rect x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords-15}\" width=\"#{width*2}\" height=\"30\" style=\"fill:#{color};stroke:black;stroke-width:1\" />\n")
     #file.write("<text x=\"#{(exon.start+x_start_coords)*2+10}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.start}:#{exon.finish})</text>")
+    self.local_borders[organism.name].each do |borders|
+      file.write("<line x1=\"#{(x_start_coords + borders[0])*2}\" y1=\"#{y_coords-18}\" x2=\"#{(x_start_coords + borders[0])*2}\" y2=\"#{y_coords+15}\" style=\"stroke:rgb(232, 18, 18);stroke-width:1\" />")
+      file.write("<line x1=\"#{(x_start_coords + borders[1]-1)*2}\" y1=\"#{y_coords-18}\" x2=\"#{(x_start_coords + borders[1]-1)*2}\" y2=\"#{y_coords+15}\" style=\"stroke:rgb(18, 18, 232);stroke-width:1\" />")
+    end
+    #file.write("<line x1=\"#{(x_start + 100)*2}\" y1=\"0\" x2=\"#{(x_start + 100)*2}\" y2=\"#{svg_height}\" style=\"stroke:#{color};stroke-width:1\" />")
+
     file.write("<text x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords}\" fill=\"black\">#{data_to_show}</text>")
   end
 
