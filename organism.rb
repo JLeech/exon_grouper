@@ -3,6 +3,7 @@ require_relative "exon.rb"
 class Organism
 
 	attr_accessor :name
+	attr_accessor :code_name
 	attr_accessor :exons
 	attr_accessor :number
 	attr_accessor :allignement_length
@@ -14,7 +15,8 @@ class Organism
 		self.number = number
 		self.allignement_length = allignement.length
 		self.allignement = allignement
-		puts name
+		self.code_name = name.split("_").map { |val| val[0..2] }.join("_")
+		puts "#{name} : #{code_name}"
 	end
 
 end
@@ -23,4 +25,3 @@ end
 
 
 
-  

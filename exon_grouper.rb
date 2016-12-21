@@ -9,46 +9,8 @@ require_relative "exon_concat_matcher.rb"
 require_relative "cat_cat_matcher.rb"
 require_relative "group_saver.rb"
 require_relative "clique_finder.rb"
+require_relative "common.rb"
 
-class ExonsSplitsIds
-
-  attr_accessor :organism_number
-  attr_accessor :match_organism_number
-  attr_accessor :splits
-
-  def initialize(splits, organism, match_organism)
-    self.organism_number = organism.number
-    self.match_organism_number = match_organism.number
-    self.splits = splits
-  end
-
-  def get_ids_for_organism
-    if @ids_for_organism.nil?
-      @ids_for_organism = count_ids(splits["organism"], organism_number)
-    end
-    return @ids_for_organism 
-  end
-
-  def get_ids_for_match_organism
-    if @ids_for_match_organism.nil?
-      @ids_for_match_organism = count_ids(splits["match_organism"], match_organism_number)
-    end
-    return @ids_for_match_organism
-  end
-
-  def count_ids(org_splits, org_number)
-    exon_org_ids = []
-    last_id_count = 0
-    org_splits.each do |org_split|
-      number_of_exons_in_split = org_split.split("UU").length
-      current_ids = (1..( number_of_exons_in_split )).to_a.map{ |num|  "#{ (org_number+1)*100+num+last_id_count}"  }
-      last_id_count += number_of_exons_in_split
-      exon_org_ids << current_ids
-    end
-    return exon_org_ids
-  end
-
-end
 
 class ExonGrouper
   
@@ -138,8 +100,6 @@ class ExonGrouper
           # puts "O : #{org_part}"
           # puts "M : #{match_org_part}"
           # puts "\n"
-          # puts "#{cat_cat_matcher.cat_cat_result.local_seq_1}"
-          # puts "#{cat_cat_matcher.cat_cat_result.local_seq_2}"
           seq_1_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_1
           seq_2_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_2
           
@@ -149,13 +109,13 @@ class ExonGrouper
           # puts "LB: #{seq_2_bord}"
           # res_1 = "C : "
           # seq_1_bord.each do |slice|
-          #   res_1 += "#{organism.allignement[slice[0]..(slice[1]-1)]}+"
+          #   res_1 += "#{organism.allignement[slice[0]..(slice[1])]}+"
           # end
           # puts res_1
 
           # res_2 = "C : "
           # seq_2_bord.each do |slice|
-          #   res_2 += "#{match_organism.allignement[slice[0]..(slice[1]-1)]}+"
+          #   res_2 += "#{match_organism.allignement[slice[0]..(slice[1])]}+"
           # end
           # puts res_2
           # puts "---------------"
@@ -169,7 +129,8 @@ class ExonGrouper
       # puts "#{local_borders}"
       border_data = "organism:   #{organism.name}\n"
       border_data +="starts:     #{local_borders[organism.name].map{ |pair| pair[0] }}\n"
-      border_data +="ebds:       #{local_borders[organism.name].map{ |pair| pair[1] }}\n"
+      border_data +="ends:       #{local_borders[organism.name].map{ |pair| pair[1] }}\n"
+
       File.open("#{self.output_filename}_borders.txt", 'a') { |file| file.write(border_data) }
     end
   end
@@ -378,7 +339,7 @@ class ExonGrouper
 
 
     puts "exon number : #{organisms.map{ |org| org.exons.length }.inject(:+)}"
-    #`inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
+    `inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
   end
 
   def print_groups_to_csv
@@ -444,10 +405,10 @@ private
     color = exon.get_svg_color
     file.write("<rect x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords-15}\" width=\"#{width*2}\" height=\"30\" style=\"fill:#{color};stroke:black;stroke-width:0\" />\n")
     #file.write("<text x=\"#{(exon.start+x_start_coords)*2+10}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.start}:#{exon.finish})</text>")
-    self.local_borders[organism.name].each do |borders|
-      file.write("<line x1=\"#{(x_start_coords + borders[0])*2}\" y1=\"#{y_coords-18}\" x2=\"#{(x_start_coords + borders[0])*2}\" y2=\"#{y_coords+15}\" style=\"stroke:rgb(232, 18, 18);stroke-width:1\" />")
-      file.write("<line x1=\"#{(x_start_coords + borders[1]-1)*2}\" y1=\"#{y_coords-18}\" x2=\"#{(x_start_coords + borders[1]-1)*2}\" y2=\"#{y_coords+15}\" style=\"stroke:rgb(18, 18, 232);stroke-width:1\" />")
-    end
+    # self.local_borders[organism.name].each do |borders|
+    #   file.write("<line x1=\"#{(x_start_coords + borders[0])*2}\" y1=\"#{y_coords-18}\" x2=\"#{(x_start_coords + borders[0])*2}\" y2=\"#{y_coords+15}\" style=\"stroke:rgb(232, 18, 18);stroke-width:1\" />")
+    #   file.write("<line x1=\"#{(x_start_coords + borders[1]-1)*2}\" y1=\"#{y_coords-18}\" x2=\"#{(x_start_coords + borders[1]-1)*2}\" y2=\"#{y_coords+15}\" style=\"stroke:rgb(18, 18, 232);stroke-width:1\" />")
+    # end
     #file.write("<line x1=\"#{(x_start + 100)*2}\" y1=\"0\" x2=\"#{(x_start + 100)*2}\" y2=\"#{svg_height}\" style=\"stroke:#{color};stroke-width:1\" />")
 
     file.write("<text x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords}\" fill=\"black\">#{data_to_show}</text>")

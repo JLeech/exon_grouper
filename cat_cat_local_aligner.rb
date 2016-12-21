@@ -1,6 +1,7 @@
 require "matrix"
 require_relative "cat_cat_matcher.rb"
 require_relative "data_processor.rb"
+require_relative "common.rb"
 
 class Matrix
   
@@ -25,67 +26,12 @@ class Matrix
   
 end
 
-class LocalResult
-
-  attr_accessor :start_positions
-  attr_accessor :end_positions
-  attr_accessor :align_1
-  attr_accessor :align_2
-  attr_accessor :score
-
-  def initialize(results)
-    self.start_positions = results["start_positions"]
-    self.end_positions = results["end_positions"]
-    self.align_1 = results["align_1"]
-    self.align_2 = results["align_2"]
-    self.score = results["score"]
-  end
-
-  def from_start_1?
-    return start_1 == 0
-  end
-
-  def from_start_2?
-    return start_2 == 0
-  end
-
-  def till_end_1?(seq)
-    return end_1 == (seq.length-1)
-  end
-
-  def till_end_2?(seq)
-    return end_2 == (seq.length-1)    
-  end
-
-  def start_1
-    return self.start_positions[0]
-  end
-
-  def start_2
-    return self.start_positions[1]
-  end
-
-  def end_1
-    return self.end_positions[0]
-  end
-
-  def end_2
-    return self.end_positions[1]
-  end
-
-  def aligns
-    return [align_1, align_2]
-  end
-
-end
-
 class CatCatLocalAligner
 
   attr_accessor :seq_1
   attr_accessor :seq_2
 
   attr_accessor :blosum
-
 
   def initialize(seq_1 = "", seq_2 = "", blosum = {})
     self.seq_1 = seq_1
