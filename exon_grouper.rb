@@ -383,35 +383,49 @@ private
   end
 
   def print_organism_name(organism, index, file)
-    y_coords = 40*(index+1) - 10
-    file.write("<text x=\"10\" y=\"#{y_coords}\" fill=\"black\" font-size=\"20px\">#{organism.name}</text>")
+    y_coord = 40*(index+1) - 10
+    draw_text(10, y_coord, organism.name, file)
   end
 
   def draw_organism_line(index, svg_width, file)
-    y_coords = 40*(index+1)
+    y_coord = 40*(index+1)
     x_start_coords = 100
     x_end_coords = svg_width - 100
-    file.write("<line x1=\"#{x_start_coords}\" y1=\"#{y_coords}\" x2=\"#{x_end_coords}\" y2=\"#{y_coords}\" style=\"stroke:rgb(0,0,0);stroke-width:1\" />")
+    draw_line(x_start_coords, y_coord, x_end_coords, y_coord, "rgb(0,0,0)", file)
   end
 
   def draw_border_line(x_start, color, file, svg_height)
-    file.write("<line x1=\"#{(x_start + 100)*2}\" y1=\"0\" x2=\"#{(x_start + 100)*2}\" y2=\"#{svg_height}\" style=\"stroke:#{color};stroke-width:1\" />")
+    x1 = (x_start + 100)*2
+    y1 = 0
+    draw_line(x1, y1, x1, svg_height, color, file)
   end
 
   def draw_exon_box(organism, index, exon, file, data_to_show)
-    y_coords = 40*(index+1)
+    y_coord = 40*(index+1)
     x_start_coords = 100
     width = exon.finish - exon.start
     color = exon.get_svg_color
-    file.write("<rect x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords-15}\" width=\"#{width*2}\" height=\"30\" style=\"fill:#{color};stroke:black;stroke-width:0\" />\n")
-    #file.write("<text x=\"#{(exon.start+x_start_coords)*2+10}\" y=\"#{y_coords}\" fill=\"black\">(#{exon.start}:#{exon.finish})</text>")
-    # self.local_borders[organism.name].each do |borders|
-    #   file.write("<line x1=\"#{(x_start_coords + borders[0])*2}\" y1=\"#{y_coords-18}\" x2=\"#{(x_start_coords + borders[0])*2}\" y2=\"#{y_coords+15}\" style=\"stroke:rgb(232, 18, 18);stroke-width:1\" />")
-    #   file.write("<line x1=\"#{(x_start_coords + borders[1]-1)*2}\" y1=\"#{y_coords-18}\" x2=\"#{(x_start_coords + borders[1]-1)*2}\" y2=\"#{y_coords+15}\" style=\"stroke:rgb(18, 18, 232);stroke-width:1\" />")
-    # end
-    #file.write("<line x1=\"#{(x_start + 100)*2}\" y1=\"0\" x2=\"#{(x_start + 100)*2}\" y2=\"#{svg_height}\" style=\"stroke:#{color};stroke-width:1\" />")
 
-    file.write("<text x=\"#{(exon.start+x_start_coords)*2}\" y=\"#{y_coords}\" fill=\"black\">#{data_to_show}</text>")
+    x = (exon.start+x_start_coords)*2
+    y = y_coord-15
+    width = width*2
+    height = 30
+    draw_rect(x, y, width, height, color, file)
+
+    x_text = (exon.start+x_start_coords)*2
+    draw_text(x_text, y_coord, data_to_show, file)
+  end
+
+  def draw_line(x1,y1,x2,y2,color,file)
+    file.write("<line x1=\"#{x1}\" y1=\"#{y1}\" x2=\"#{x2}\" y2=\"#{y2}\" style=\"stroke:#{color};stroke-width:1\" />")
+  end
+
+  def draw_rect(x,y,width,height,color,file)
+    file.write("<rect x=\"#{x}\" y=\"#{y}\" width=\"#{width}\" height=\"#{height}\" style=\"fill:#{color};stroke:black;stroke-width:0\" />\n")
+  end
+
+  def draw_text(x,y,text,file)
+    file.write("<text x=\"#{x}\" y=\"#{y}\" fill=\"black\">#{text}</text>")
   end
 
 end

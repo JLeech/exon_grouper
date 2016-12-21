@@ -192,6 +192,8 @@ class CatCatMatcher
               "exons_org_2",
               "exons_org_1_count",
               "exons_org_2_count",
+              "maxS",
+              "minS",
               "Start",
               "End",
               "Leng",

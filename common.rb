@@ -169,6 +169,8 @@ class CatCatResult
       proxy.get_match_org_exons,
       proxy.get_org_exons_count,
       proxy.get_match_org_exons_count,
+      [proxy.get_org_exons_count,proxy.get_match_org_exons_count].max,
+      [proxy.get_org_exons_count,proxy.get_match_org_exons_count].min,
       proxy.coords[0],
       proxy.coords[1],
       proxy.coords[1]-proxy.coords[0],
@@ -217,7 +219,7 @@ class CatCatResult
   end
 
   def save_references(file_path, proxy)
-    
+
   end
 
 end
