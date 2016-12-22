@@ -28,26 +28,31 @@ class CatCatMatcher
     locals = local_recursive(no_gap_seq_1, no_gap_seq_2)
     local_1 = ""
     local_2 = ""
+    local_1_for_score = ""
+    local_2_for_score = ""
     locals.each do |local_split|
-      local_1 += local_split[0]
-      local_2 += local_split[1]
+      local_1 += local_split.get_for_coords_seq(1)
+      local_2 += local_split.get_for_coords_seq(2)
     end
-    local_1_for_score = local_1.gsub("|","").gsub("+","")
-    local_2_for_score = local_2.gsub("|","").gsub("+","")
-    cat_cat_result.local_seq_1 = local_1
-    cat_cat_result.local_seq_2 = local_2
+    locals.keep_if{ |loc| loc.type == LocalReqursiveResult::GOOD }.map(&:get_raw).each do |local_pair|
+      local_1_for_score += local_pair.first
+      local_2_for_score += local_pair.last
+    end
+    cat_cat_result.locals = locals
     cat_cat_result.local_score, _ = count_blosum(local_1_for_score, local_2_for_score)
     cat_cat_result.local_self_1_score, _ = count_blosum(local_1_for_score, local_1_for_score)
     cat_cat_result.local_self_2_score, _ = count_blosum(local_2_for_score, local_2_for_score)
+    puts "#{local_1}"
     cat_cat_result.local_borders_seq_1 = get_local_borders(local_1, cat_cat_proxy.seq_1)
     cat_cat_result.local_borders_seq_2 = get_local_borders(local_2, cat_cat_proxy.seq_2)
     raise "local 1 borders error" if cat_cat_result.local_borders_seq_1.length%2 != 0
     raise "local 2 borders error" if cat_cat_result.local_borders_seq_2.length%2 != 0
   end
 
-  def local_recursive(seq_1, seq_2, len_coef = 1.0)
+  def local_recursive(seq_1, seq_2, len_coef = 1.0, iter = 1)
     if stop_results?(seq_1, seq_2, len_coef)
-      return [margin(seq_1,seq_2)]
+      al_1, al_2 = margin(seq_1, seq_2)
+      return [LocalReqursiveResult.new(al_1, al_2, LocalReqursiveResult::BAD)]
     end
     local_result = CatCatLocalAligner.new(seq_1, seq_2, cat_cat_proxy.blosum).align
     min_seq_length = [seq_1, seq_2].map(&:length).min.to_f
@@ -65,9 +70,13 @@ class CatCatMatcher
     right_length_coef = [right_part_1,right_part_2].map(&:length).min.to_f/min_seq_length
     final = ""
     if (local_result.align_1.length < 5) || (local_result.align_2.length < 5)
-      final = [margin(seq_1, seq_2)] 
+      al_1, al_2 = margin(seq_1, seq_2)
+      final = [LocalReqursiveResult.new(al_1, al_2, LocalReqursiveResult::BAD)]
     else
-      final = local_recursive(left_part_1,left_part_2,left_length_coef) + [["+#{local_result.align_1}+", "+#{local_result.align_2}+"]] + local_recursive(right_part_1,right_part_2,right_length_coef)
+      self.cat_cat_result.local_iters += 1
+      final = local_recursive(left_part_1,left_part_2,left_length_coef, iter+1) + 
+              [LocalReqursiveResult.new(local_result.align_1, local_result.align_2, LocalReqursiveResult::GOOD, iter)] + 
+              local_recursive(right_part_1,right_part_2,right_length_coef,iter+1)
     end
     return final
   end
@@ -85,7 +94,7 @@ class CatCatMatcher
     elsif seq_1.length < seq_2.length
       seq_1 += "-"*(seq_2.length-seq_1.length)
     end
-    return ["|"+seq_1+"|", "|"+seq_2+"|"]
+    return [seq_1, seq_2]
   end
 
   def count_blosum(main_allignement, matching_allignement, global = false)
@@ -181,6 +190,10 @@ class CatCatMatcher
     File.write("#{output_filename}_local_allignements.txt", '')
   end
   
+  def self.reference_header(output_csv)
+
+  end
+
   def self.csv_header(output_csv)
     CSV.open("#{output_csv}.csv", "w") do |csv|
       header = ["pair_id",

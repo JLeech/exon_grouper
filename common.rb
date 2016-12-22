@@ -102,13 +102,14 @@ class CatCatResult
   attr_accessor :seq_2_score
 
   attr_accessor :local_score
-  attr_accessor :local_seq_1
-  attr_accessor :local_seq_2
   attr_accessor :local_self_1_score
   attr_accessor :local_self_2_score
 
   attr_accessor :local_borders_seq_1
   attr_accessor :local_borders_seq_2
+
+  attr_accessor :local_iters
+  attr_accessor :locals
 
   def initialize
     self.added_spaces = 0
@@ -125,13 +126,13 @@ class CatCatResult
     self.seq_2_score = 0
 
     self.local_score = 0
-    self.local_seq_1 = ""
-    self.local_seq_2 = ""
     self.local_self_1_score = 0
     self.local_self_2_score = 0
 
     self.local_borders_seq_1 = []
     self.local_borders_seq_2 = []
+
+    self.local_iters = 0
   end
 
   def check
@@ -152,6 +153,14 @@ class CatCatResult
     puts ": #{deletions_2}"
     puts ": #{seq_1_score}"
     puts ": #{seq_2_score}"
+  end
+
+  def local_seq_1
+    return locals.map{ |local| local.get_formatted_seq(1) }.join("")
+  end
+
+  def local_seq_2
+    return locals.map{ |local| local.get_formatted_seq(2) }.join("")
   end
 
   def save(file_path, proxy)
@@ -218,10 +227,6 @@ class CatCatResult
     File.open("#{file_path}_local_allignements.txt", 'a') { |file| file.write(output) }
   end
 
-  def save_references(file_path, proxy)
-
-  end
-
 end
 
 class LocalResult
@@ -274,6 +279,88 @@ class LocalResult
 
   def aligns
     return [align_1, align_2]
+  end
+
+end
+
+
+class LocalReqursiveResult
+
+  GOOD = 1
+  BAD = 0
+
+  attr_accessor :seq_1
+  attr_accessor :seq_2
+  attr_accessor :index
+  attr_accessor :type
+  attr_accessor :global_coords
+
+
+  def initialize(seq_1, seq_2, type, index = '')
+    self.seq_1 = seq_1
+    self.seq_2 = seq_2
+    self.index = index
+    self.type = type
+    self.global_coords = [-1,-1]
+  end
+
+  def get_formatted
+    type_mark = type == GOOD ? "+" : "|"
+    return [get_formatted_seq(1),get_formatted_seq(2)]
+  end
+
+  def get_formatted_seq(seq_number)
+    if type == GOOD
+      return "+#{index}+"+self.send("seq_#{seq_number}")+"+#{index}+"
+    else
+      return "|"+self.send("seq_#{seq_number}")+"|"
+    end
+  end
+
+  def get_for_coords_seq(seq_number)
+    type_mark = type == GOOD ? "+" : "|"
+    return "#{type_mark}"+self.send("seq_#{seq_number}")+"#{type_mark}"
+  end
+
+  def get_raw
+    return [seq_1, seq_2]
+  end
+
+end
+
+class IterSaver
+
+  attr_accessor :pair_id
+  attr_accessor :spec_1
+  attr_accessor :spec_2
+  attr_accessor :seq_1
+  attr_accessor :seq_2
+  attr_accessor :exons_ids
+
+  def initialize(pair_id, spec_1, spec_2, seq_1, seq_2, exons_ids, file_path)
+
+  end
+
+  def self.header(file_path)
+    CSV.open("#{file_path}_iters.csv", "w") do |csv|
+      header = ["pair_id",
+                "spec_1",
+                "spec_2",
+                "length",
+                "num_iter",
+                "iter",
+                "exons_ids_1",
+                "exons_ids_2",
+                "size_ex_1",
+                "size_ex_2",
+                "local_score",
+                "self_local_score_1",
+                "self_local_score_2",
+                "local_score_1_coef",
+                "local_score_2_coef",
+            ]
+      csv << header
+    end
   end
 
 end

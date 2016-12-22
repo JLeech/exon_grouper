@@ -47,6 +47,8 @@ class ExonGrouper
     #self.organisms = all_organisms[0..(self.organism_number-1)]
     self.organisms = [all_organisms[0],all_organisms[4]]
     clear_output_file
+    Organism.set_headers(output_filename)
+    self.organisms.each{ |org| org.save_references(output_filename) }
   end
 
   def group
@@ -109,13 +111,13 @@ class ExonGrouper
           # puts "LB: #{seq_2_bord}"
           # res_1 = "C : "
           # seq_1_bord.each do |slice|
-          #   res_1 += "#{organism.allignement[slice[0]..(slice[1])]}+"
+          #   res_1 += "#{organism.allignement[slice[0]..(slice[1])]}"
           # end
           # puts res_1
 
           # res_2 = "C : "
           # seq_2_bord.each do |slice|
-          #   res_2 += "#{match_organism.allignement[slice[0]..(slice[1])]}+"
+          #   res_2 += "#{match_organism.allignement[slice[0]..(slice[1])]}"
           # end
           # puts res_2
           # puts "---------------"
@@ -372,8 +374,7 @@ private
   def clear_output_file
     header = "ex1,ex2,pair_id,st1,end1,st2,end2\n"
     File.open("#{self.output_filename}_borders.txt", 'w') { |file| file.write(header) }
-    header = "ex1,ex2,pair_id,st1,end1,st2,end2\n"
-    File.open("#{self.output_filename}_graph_borders.txt", 'w') { |file| file.write(header) }
+    IterSaver.header(self.output_filename)
   end
 
   def get_pair_id(number, org_num, match_org_num)
