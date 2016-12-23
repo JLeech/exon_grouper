@@ -5,10 +5,8 @@ require "set"
 require_relative "exon.rb"
 require_relative "organism.rb"
 require_relative "data_processor"
-require_relative "exon_concat_matcher.rb"
 require_relative "cat_cat_matcher.rb"
-require_relative "group_saver.rb"
-require_relative "clique_finder.rb"
+require_relative "con_cat_matcher.rb"
 require_relative "common.rb"
 
 
@@ -54,20 +52,7 @@ class ExonGrouper
   def group
     time1 = Time.now
     exons = []
-    # создаются связи между экзонами (какие вложены в какие)
-    #count_concat_statistics
     count_cat_cat_statistics
-    # make_connections
-    # # reallocate_connections
-    # self.organisms.each do |organism|
-    #   exons += organism.exons
-    # end
-    # time2 = Time.now
-    # puts "making connections: #{time2 - time1}"
-    # #нумеруются группы вложенности
-    # make_groups(exons)
-    # time3 = Time.now
-    # puts "making groups: #{time3 - time2}"
   end
 
   def count_cat_cat_statistics
@@ -121,7 +106,10 @@ class ExonGrouper
           # end
           # puts res_2
           # puts "---------------"
-
+          if cat_cat_matcher.has_multiple?
+            con_cat_matcher = ConCatMatcher.new(cat_cat_proxy)
+            con_cat_matcher.align
+          end
           self.local_borders[organism.name] += seq_1_bord
           self.local_borders[match_organism.name] += seq_2_bord
           pair_counter += 1
@@ -174,152 +162,6 @@ class ExonGrouper
     return all
   end
 
-  def count_concat_statistics
-    ExonConcatMatcher.csv_header(output_filename)
-    ExonConcatMatcher.clear_output_file(output_filename)
-    pair_counter = 0
-    time1 = Time.now
-    self.organisms.each_with_index do |organism, index|
-      puts "#{index} : #{organism.name}"
-      organism.exons.each do |exon|
-        organisms.each_with_index do |match_organism, match_index|
-          time3 = Time.now
-          next if match_index == index
-          selected = select_exons(match_organism, exon.get_coords)
-          sequences = [exon.allignement, selected.map(&:allignement).join("UU")]
-          next if selected.empty?
-          coords = [] << exon.get_coords << [selected[0].start, selected[-1].finish]
-          sequences_data = {
-            pair_id: get_pair_id(pair_counter),
-            org_name: organism.name,
-            exon_index: exon.uuid,
-            match_org_name: match_organism.name,
-            match_exon_index: selected.map(&:uuid).join(","),
-            concatted_exons: selected
-          }
-          exon_matcher = ExonConcatMatcher.new(sequences, coords, sequences_data, blossum_matrix,
-                 organism, match_organism, exon, nil)
-          exon_matcher.count_everything
-          exon_matcher.print_for_csv(output_filename)
-          exon_matcher.print_statistics_for_txt(output_filename)
-          pair_counter += 1
-          time4 = Time.now
-          print "#{(time4-time3).round(2)} | "
-        end
-      end
-      time2 = Time.now
-      puts "Total org: #{time2-time1}"
-    end
-  end
-
-  def make_connections
-    ExonMatcher.csv_header(output_filename)
-    ExonMatcher.clear_output_file(output_filename)
-    pair_counter = 0
-    self.organisms.each_with_index do |organism, index|
-      puts "#{index} : #{organism.name}"
-      break if index+1 == self.organisms.length
-      self.organisms[(index+1)..-1].each do |match_organism|
-        organism.exons.each_with_index do |exon, organism_exon_index|
-          exon_includes = false # флаг того, вложен ли экзон в кого-то
-          match_organism.exons.each_with_index do |match_exon, match_organism_index|
-            # проверяем вложен ли экзон, с учётом процента совпадения из options
-            if exon.include?(match_exon, self.percent)
-              sequences = [exon.allignement, match_exon.allignement]
-              coords = [] << exon.get_coords << match_exon.get_coords
-              sequences_data = {pair_id: get_pair_id(pair_counter),
-                        org_name: organism.name,
-                        exon_index: exon.uuid,
-                        match_org_name: match_organism.name,
-                        match_exon_index: match_exon.uuid,
-                        }
-              exon_matcher = ExonMatcher.new(sequences, coords, sequences_data, blossum_matrix,
-                               organism, match_organism, exon, match_exon)
-              exon_matcher.count_everything
-              borders = get_borders(exon_matcher, exon, match_exon, sequences_data)
-              File.open("#{self.output_filename}_borders.csv", 'a') { |file| file.write(borders) }
-              if ([exon_matcher.rloc_1, exon_matcher.rloc_2].max > 0.2)
-                exon_includes = true
-                exon.connections << match_exon
-                match_exon.connections << exon
-                set_exon_coefs(exon, match_exon, exon_matcher)
-                exon.local_borders << [exon_matcher.local_data['start_position_1'], exon_matcher.local_data['end_position_1']]
-                match_exon.local_borders << [exon_matcher.local_data['start_position_2'], exon_matcher.local_data['end_position_2']]
-                File.open("#{self.output_filename}_graph_borders.csv", 'a') { |file| file.write(borders) }
-              end
-              exon_matcher.print_for_csv(output_filename)
-              exon_matcher.print_statistics_for_txt(output_filename)
-              pair_counter += 1
-            
-            elsif exon_includes
-              break
-            end
-          end
-        end
-      end
-    end
-    puts "pairs: #{pair_counter}"
-  end
-
-  def select_exons(match_organism, coords)
-    selected_exons = []
-    match_organism.exons.each do |exon|
-      if (exon.finish >= coords[0]) & (exon.finish <= coords[1])
-        selected_exons << exon
-      elsif (exon.finish >= coords[1]) & (exon.start <= coords[1])
-        selected_exons << exon
-      end
-    end
-    return selected_exons
-  end
-
-  def make_groups(exons)
-    exons.each do |exon|
-      self.exons_hash[exon.uuid] = exon  
-    end
-    
-    group = group_green(exons)
-  end
-
-  def group_green(exons)
-    group = 0
-    exons.each do |exon|
-      if ((exon.group.empty?) & (exon.green?))
-        cf = CliqueFinder.new(exon)
-        cf.make_graph
-        cliques = cf.make_cliques
-        group = mark_cliques(cliques, group)
-      end
-    end
-    return group
-  end
-
-  def mark_cliques(cliques, group)
-    cliques.each do |clique|
-      clique.each do |exon_in_clique_id|
-        self.exons_hash[exon_in_clique_id].group << group
-      end
-      group += 1
-    end
-    return group
-  end
-
-  def set_exon_coefs(exon, match_exon, exon_matcher)
-    rloc_max = [exon_matcher.rloc_1, exon_matcher.rloc_2].max
-    local_length_coef_max = [ exon_matcher.local_data["local_length_1_coef"], exon_matcher.local_data["local_length_2_coef"] ].max
-    min_local_length = [ exon_matcher.local_data["raw_length_1"], exon_matcher.local_data["raw_length_2"] ].min
-    matching_letters_length_coef = [exon_matcher.matching_letters/exon.alignement_no_gap_length,exon_matcher.matching_letters/match_exon.alignement_no_gap_length].max
-    exon.min_local_lengths[match_exon.organism_index] << min_local_length
-    exon.r_maxes[match_exon.organism_index] << rloc_max
-    exon.local_length_coef_maxes[match_exon.organism_index] << local_length_coef_max
-    exon.matching_letters[match_exon.organism_index] << matching_letters_length_coef
-
-    match_exon.min_local_lengths[exon.organism_index] << min_local_length
-    match_exon.r_maxes[exon.organism_index] << rloc_max
-    match_exon.local_length_coef_maxes[exon.organism_index] << local_length_coef_max
-    match_exon.matching_letters[exon.organism_index] << matching_letters_length_coef
-  end
-
   def draw_as_svg_rectangels(data_to_show)
     svg_width = self.organisms.first.allignement_length*2 + 200
     svg_height = self.organisms.count * 40 + 40
@@ -338,15 +180,8 @@ class ExonGrouper
       file.write("</svg>")
     end
 
-
-
     puts "exon number : #{organisms.map{ |org| org.exons.length }.inject(:+)}"
     `inkscape -z -e #{output_file_name}.png -w #{svg_width} -h #{svg_height} #{output_file_name}.svg`
-  end
-
-  def print_groups_to_csv
-    group_saver = GroupSaver.new(self.organisms, output_filename)
-    group_saver.save_to_csv
   end
   
   def get_borders(aligner, exon, match_exon, sequence_data)
@@ -375,6 +210,7 @@ private
     header = "ex1,ex2,pair_id,st1,end1,st2,end2\n"
     File.open("#{self.output_filename}_borders.txt", 'w') { |file| file.write(header) }
     IterSaver.header(self.output_filename)
+    ConCatMatcher.header(self.output_filename)
   end
 
   def get_pair_id(number, org_num, match_org_num)

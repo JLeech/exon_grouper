@@ -195,7 +195,6 @@ class CatCatResult
       proxy.coords[1]-proxy.coords[0],
       self.seq_1_score,
       self.seq_2_score,
-      self.usual_score,
       self.affine_score,
       aff_seq_1,
       aff_seq_2,

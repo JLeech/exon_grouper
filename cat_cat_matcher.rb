@@ -60,6 +60,10 @@ class CatCatMatcher
     raise "local 2 borders error" if cat_cat_result.local_borders_seq_2.length%2 != 0
   end
 
+  def has_multiple?
+    return (cat_cat_result.locals.map(&:seq1_exons_ids).map(&:length).max > 1 ) & (cat_cat_result.locals.map(&:seq2_exons_ids).map(&:length).max > 1)
+  end
+
   def local_recursive(seq_1, seq_2, len_coef = 1.0, iter = 1)
     if stop_results?(seq_1, seq_2, len_coef)
       al_1, al_2 = margin(seq_1, seq_2)
@@ -251,10 +255,7 @@ class CatCatMatcher
     File.write("#{output_filename}_allignements.txt", '')
     File.write("#{output_filename}_local_allignements.txt", '')
   end
-  
-  def self.reference_header(output_csv)
 
-  end
 
   def self.csv_header(output_csv)
     CSV.open("#{output_csv}.csv", "w") do |csv|
@@ -274,7 +275,6 @@ class CatCatMatcher
               "Leng",
               "Tuple1_Sc",
               "Tuple2_Sc",
-              "Mono_sc",
               "Aff_sc",
               "Aff_Seq1",
               "Aff_Seq2",
