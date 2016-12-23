@@ -68,20 +68,28 @@ class CatCatProxy
     self.sequences[1]
   end
 
-  def get_org_exons 
-    exons_ids.get_ids_for_organism[self.split_index].join(",")
+  def get_org_exons_raw
+    exons_ids.get_ids_for_organism[self.split_index]
   end
 
-  def get_match_org_exons
-    exons_ids.get_ids_for_match_organism[self.split_index].join(",")
+  def get_org_exons 
+    get_org_exons_raw.join(",")
   end
 
   def get_org_exons_count 
-    exons_ids.get_ids_for_organism[self.split_index].length
+    get_org_exons_raw.length
+  end
+
+  def get_match_org_exons_raw
+    exons_ids.get_ids_for_match_organism[self.split_index]
+  end
+
+  def get_match_org_exons
+    get_match_org_exons_raw.join(",")
   end
 
   def get_match_org_exons_count
-    exons_ids.get_ids_for_match_organism[self.split_index].length
+    get_match_org_exons_raw.length
   end
 
 end
@@ -293,7 +301,8 @@ class LocalReqursiveResult
   attr_accessor :seq_2
   attr_accessor :index
   attr_accessor :type
-  attr_accessor :global_coords
+  attr_accessor :seq1_exons_ids
+  attr_accessor :seq2_exons_ids
 
 
   def initialize(seq_1, seq_2, type, index = '')
@@ -301,7 +310,8 @@ class LocalReqursiveResult
     self.seq_2 = seq_2
     self.index = index
     self.type = type
-    self.global_coords = [-1,-1]
+    self.seq1_exons_ids = []
+    self.seq2_exons_ids = []
   end
 
   def get_formatted

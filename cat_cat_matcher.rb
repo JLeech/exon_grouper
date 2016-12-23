@@ -34,15 +34,24 @@ class CatCatMatcher
       local_1 += local_split.get_for_coords_seq(1)
       local_2 += local_split.get_for_coords_seq(2)
     end
-    locals.keep_if{ |loc| loc.type == LocalReqursiveResult::GOOD }.map(&:get_raw).each do |local_pair|
-      local_1_for_score += local_pair.first
-      local_2_for_score += local_pair.last
+    locals.each do |local_split|
+      next if local_split.type == LocalReqursiveResult::BAD 
+      local_1_for_score += local_split.get_raw.first
+      local_2_for_score += local_split.get_raw.last
     end
+
+    set_exons_for_locals(locals)
+    # puts "#{cat_cat_proxy.get_org_exons_raw}\n"
+    # puts "#{local_1}"
+    # locals.each do |local|
+    #   print "#{local.seq1_exons_ids} "
+    # end
+    # puts "\n"
+    # puts "-----------------"
     cat_cat_result.locals = locals
     cat_cat_result.local_score, _ = count_blosum(local_1_for_score, local_2_for_score)
     cat_cat_result.local_self_1_score, _ = count_blosum(local_1_for_score, local_1_for_score)
     cat_cat_result.local_self_2_score, _ = count_blosum(local_2_for_score, local_2_for_score)
-    puts "#{local_1}"
     cat_cat_result.local_borders_seq_1 = get_local_borders(local_1, cat_cat_proxy.seq_1)
     cat_cat_result.local_borders_seq_2 = get_local_borders(local_2, cat_cat_proxy.seq_2)
     raise "local 1 borders error" if cat_cat_result.local_borders_seq_1.length%2 != 0
@@ -95,6 +104,57 @@ class CatCatMatcher
       seq_1 += "-"*(seq_2.length-seq_1.length)
     end
     return [seq_1, seq_2]
+  end
+
+  def set_exons_for_locals(locals)
+    org_exons = cat_cat_proxy.get_org_exons_raw
+    m_org_exons = cat_cat_proxy.get_match_org_exons_raw
+    cur_org_ex_index = 0 
+    cur_local_index = 0
+
+    seq_1 = locals.map(&:seq_1).join("_")
+
+    marked = false
+    seq_1.each_char.with_index do |char, index|
+      if char == "_"
+        cur_local_index += 1
+        marked = false
+        next
+      end
+      if (seq_1[index..(index+1)] == "UU") & (index != 0)  
+        cur_org_ex_index += 1
+        marked = false
+        next
+      end
+      if char != "U" && marked == false
+        locals[cur_local_index].seq1_exons_ids << cat_cat_proxy.get_org_exons_raw[cur_org_ex_index]
+        marked = true
+      end
+    end
+
+    cur_org_ex_index = 0 
+    cur_local_index = 0
+
+    seq_2 = locals.map(&:seq_2).join("_")
+
+    marked = false
+    seq_2.each_char.with_index do |char, index|
+      if char == "_"
+        cur_local_index += 1
+        marked = false
+        next
+      end
+      if (seq_2[index..(index+1)] == "UU") & (index != 0)  
+        cur_org_ex_index += 1
+        marked = false
+        next
+      end
+      if char != "U" && marked == false
+        locals[cur_local_index].seq2_exons_ids << cat_cat_proxy.get_match_org_exons_raw[cur_org_ex_index]
+        marked = true
+      end
+    end
+
   end
 
   def count_blosum(main_allignement, matching_allignement, global = false)
@@ -240,6 +300,5 @@ class CatCatMatcher
       csv << header
     end
   end
-
 
 end
