@@ -44,8 +44,8 @@ class ExonGrouper
   def prepare_data
     # отбираются только первые self.organism_number организмов
     all_organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare
-    #self.organisms = all_organisms[0..(self.organism_number-1)]
-    self.organisms = [all_organisms[0],all_organisms[4]]
+    self.organisms = all_organisms[0..(self.organism_number-1)]
+    #self.organisms = [all_organisms[0],all_organisms[4]]
     clear_output_file
     Organism.set_headers(output_filename)
     self.organisms.each{ |org| org.save_references(output_filename) }
@@ -95,7 +95,7 @@ class ExonGrouper
           sequences = [org_part, match_org_part]
           cat_cat_proxy = CatCatProxy.new(sequences, coords, self.blossum_matrix, organism, match_organism, 
                                           get_pair_id( part_index, organism.number, match_organism.number ),
-                                          exons_in_splits, part_index)
+                                          exons_in_splits, part_index, output_filename)
           cat_cat_matcher = CatCatMatcher.new(cat_cat_proxy)
           cat_cat_matcher.count_statistics
           cat_cat_matcher.save_to_csv(output_filename)

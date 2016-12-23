@@ -40,14 +40,16 @@ class CatCatMatcher
       local_2_for_score += local_split.get_raw.last
     end
 
+    locals.each do |local_split|
+      next if local_split.type == LocalReqursiveResult::BAD
+      local_split.score, _ = count_blosum(local_split.seq_1,local_split.seq_2)
+      local_split.score_seq_1, _ = count_blosum(local_split.seq_1,local_split.seq_1)
+      local_split.score_seq_2, _ = count_blosum(local_split.seq_2,local_split.seq_2)
+    end
+
     set_exons_for_locals(locals)
-    # puts "#{cat_cat_proxy.get_org_exons_raw}\n"
-    # puts "#{local_1}"
-    # locals.each do |local|
-    #   print "#{local.seq1_exons_ids} "
-    # end
-    # puts "\n"
-    # puts "-----------------"
+    IterSaver.save(cat_cat_proxy, locals)
+
     cat_cat_result.locals = locals
     cat_cat_result.local_score, _ = count_blosum(local_1_for_score, local_2_for_score)
     cat_cat_result.local_self_1_score, _ = count_blosum(local_1_for_score, local_1_for_score)

@@ -48,8 +48,9 @@ class CatCatProxy
   attr_accessor :pair_id
   attr_accessor :exons_ids
   attr_accessor :split_index
+  attr_accessor :file_path
 
-  def initialize(sequences = [], coords = [], blosum = nil, organism, match_organism, pair_id, exons_ids, split_index)
+  def initialize(sequences = [], coords = [], blosum = nil, organism, match_organism, pair_id, exons_ids, split_index, file_path)
     self.sequences = sequences
     self.coords = coords
     self.blosum = blosum.nil? ? DataProcessor.parse_blossum : blosum
@@ -58,6 +59,7 @@ class CatCatProxy
     self.pair_id = pair_id
     self.exons_ids = exons_ids
     self.split_index = split_index
+    self.file_path = file_path
   end
 
   def seq_1
@@ -303,20 +305,24 @@ class LocalReqursiveResult
   attr_accessor :type
   attr_accessor :seq1_exons_ids
   attr_accessor :seq2_exons_ids
+  attr_accessor :score
+  attr_accessor :score_seq_1
+  attr_accessor :score_seq_2
 
-
-  def initialize(seq_1, seq_2, type, index = '')
+  def initialize(seq_1, seq_2, type, index = 9999)
     self.seq_1 = seq_1
     self.seq_2 = seq_2
     self.index = index
     self.type = type
     self.seq1_exons_ids = []
     self.seq2_exons_ids = []
+    self.score = 0
+    self.score_seq_1 = 0
+    self.score_seq_2 = 0
   end
 
   def get_formatted
-    type_mark = type == GOOD ? "+" : "|"
-    return [get_formatted_seq(1),get_formatted_seq(2)]
+    return [get_formatted_seq(1), get_formatted_seq(2)]
   end
 
   def get_formatted_seq(seq_number)
@@ -340,14 +346,28 @@ end
 
 class IterSaver
 
-  attr_accessor :pair_id
-  attr_accessor :spec_1
-  attr_accessor :spec_2
-  attr_accessor :seq_1
-  attr_accessor :seq_2
-  attr_accessor :exons_ids
-
-  def initialize(pair_id, spec_1, spec_2, seq_1, seq_2, exons_ids, file_path)
+  def self.save(proxy, locals)
+    iters_number = locals.map(&:index).delete_if { |val| val == 9999 }.max
+    locals.sort_by(&:index).each do |local|
+      next if local.type == LocalReqursiveResult::BAD
+      result = []
+      result << proxy.pair_id
+      result << proxy.organism.code_name
+      result << proxy.match_organism.code_name
+      result << local.seq_1.length
+      result << iters_number
+      result << local.index
+      result << local.seq1_exons_ids.join(",")
+      result << local.seq2_exons_ids.join(",")
+      result << local.seq1_exons_ids.length
+      result << local.seq2_exons_ids.length
+      result << local.score
+      result << local.score_seq_1
+      result << local.score_seq_2
+      result << (local.score.to_f/local.score_seq_1).round(2)
+      result << (local.score.to_f/local.score_seq_2).round(2)
+      CSV.open("#{proxy.file_path}_iters.csv", "a") { |csv| csv << result }  
+    end
 
   end
 
