@@ -246,6 +246,12 @@ class LocalResult
   attr_accessor :align_2
   attr_accessor :score
 
+  attr_accessor :connected_exons
+  attr_accessor :connected_coords
+  attr_accessor :first_coverage
+  attr_accessor :last_coverage
+  attr_accessor :current_exon
+
   def initialize(results)
     self.start_positions = results["start_positions"]
     self.end_positions = results["end_positions"]

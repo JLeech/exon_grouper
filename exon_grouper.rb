@@ -9,7 +9,6 @@ require_relative "cat_cat_matcher.rb"
 require_relative "con_cat_matcher.rb"
 require_relative "common.rb"
 
-
 class ExonGrouper
   
   attr_accessor :path_to_file
@@ -42,8 +41,8 @@ class ExonGrouper
   def prepare_data
     # отбираются только первые self.organism_number организмов
     all_organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare
-    self.organisms = all_organisms[0..(self.organism_number-1)]
-    #self.organisms = [all_organisms[0],all_organisms[4]]
+    #self.organisms = all_organisms[0..(self.organism_number-1)]
+    self.organisms = [all_organisms[3],all_organisms[4]]
     clear_output_file
     Organism.set_headers(output_filename)
     self.organisms.each{ |org| org.save_references(output_filename) }
@@ -211,6 +210,7 @@ private
     File.open("#{self.output_filename}_borders.txt", 'w') { |file| file.write(header) }
     IterSaver.header(self.output_filename)
     ConCatMatcher.header(self.output_filename)
+    ConCatMatcher.alignements_header(self.output_filename)
   end
 
   def get_pair_id(number, org_num, match_org_num)
