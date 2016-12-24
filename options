@@ -1,16 +1,16 @@
 # path to file
 #file = ./data/MDGA2_align_coords.csv
 #file = ./data/DSCAM_coords.csv
-file = /home/eve/Документы/biology/pipeliner/genes/dscam/aligned/coords.csv
+#file = /home/eve/Документы/biology/pipeliner/genes/dscam/aligned/coords.csv
 #file = /home/eve/Документы/biology/pipeliner/genes/tenm1/aligned/coords.csv
-#file = /home/eve/Документы/biology/pipeliner/genes/fras1/aligned/coords.csv
+file = /home/eve/Документы/biology/pipeliner/genes/fras1/aligned/coords.csv
 
 # path to allignement file
 #allignement = ./data/mdga2_proteins_aligned.fasta
 #allignement = ./data/DSCAM_proteins_aligned.fasta
-allignement = /home/eve/Документы/biology/pipeliner/genes/dscam/aligned/ALIGNED.fasta
+#allignement = /home/eve/Документы/biology/pipeliner/genes/dscam/aligned/ALIGNED.fasta
 #allignement = /home/eve/Документы/biology/pipeliner/genes/tenm1/aligned/ALIGNED.fasta
-#allignement = /home/eve/Документы/biology/pipeliner/genes/fras1/aligned/ALIGNED.fasta
+allignement = /home/eve/Документы/biology/pipeliner/genes/fras1/aligned/ALIGNED.fasta
 
 # percent of matching introns for grouping
 percent = 90
@@ -19,10 +19,10 @@ percent = 90
 output = csv
 
 # output filename
-output_filename = results/result_dscam
+#output_filename = results/result_dscam
 #output_filename = results/result_tenm
-#output_filename = results/result_fras
+output_filename = results/result_fras
 #output_filename = results/result_mdga
 
 # number of organisms for constructing groups
-organism_number = 5
+organism_number = 20

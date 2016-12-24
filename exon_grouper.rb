@@ -41,8 +41,8 @@ class ExonGrouper
   def prepare_data
     # отбираются только первые self.organism_number организмов
     all_organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare
-    #self.organisms = all_organisms[0..(self.organism_number-1)]
-    self.organisms = [all_organisms[3],all_organisms[4]]
+    self.organisms = all_organisms[0..(self.organism_number-1)]
+    #self.organisms = [all_organisms[3],all_organisms[4]]
     clear_output_file
     Organism.set_headers(output_filename)
     self.organisms.each{ |org| org.save_references(output_filename) }
