@@ -6,15 +6,15 @@ class Organism
   attr_accessor :code_name
   attr_accessor :exons
   attr_accessor :number
-  attr_accessor :allignement_length
-  attr_accessor :allignement
+  attr_accessor :alignment_length
+  attr_accessor :alignment
 
-  def initialize(name, exons, number, allignement)
+  def initialize(name, exons, number, alignment)
     self.name = name
     self.exons = exons
     self.number = number
-    self.allignement_length = allignement.length
-    self.allignement = allignement
+    self.alignment_length = alignment.length
+    self.alignment = alignment
     self.code_name = name.split("_").map { |val| val[0..2] }.join("_")
     puts "#{name} : #{code_name}"
   end

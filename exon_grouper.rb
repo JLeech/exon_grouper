@@ -12,7 +12,7 @@ require_relative "common.rb"
 class ExonGrouper
   
   attr_accessor :path_to_file
-  attr_accessor :path_to_allignement
+  attr_accessor :path_to_alignment
   attr_accessor :percent
   attr_accessor :organism_number
 
@@ -27,7 +27,7 @@ class ExonGrouper
   def initialize(options = {})
 
     self.path_to_file = options["file"]
-    self.path_to_allignement = options["allignement"]
+    self.path_to_alignment = options["alignment"]
     self.percent = options["percent"].to_i
     self.organism_number = options["organism_number"].to_i
     self.output_filename = options["output_filename"]
@@ -40,7 +40,7 @@ class ExonGrouper
 
   def prepare_data
     # отбираются только первые self.organism_number организмов
-    all_organisms = DataProcessor.new(self.path_to_file, self.path_to_allignement).prepare
+    all_organisms = DataProcessor.new(self.path_to_file, self.path_to_alignment).prepare
     self.organisms = all_organisms[0..(self.organism_number-1)]
     #self.organisms = [all_organisms[3],all_organisms[4]]
     clear_output_file
@@ -95,13 +95,13 @@ class ExonGrouper
           # puts "LB: #{seq_2_bord}"
           # res_1 = "C : "
           # seq_1_bord.each do |slice|
-          #   res_1 += "#{organism.allignement[slice[0]..(slice[1])]}"
+          #   res_1 += "#{organism.alignment[slice[0]..(slice[1])]}"
           # end
           # puts res_1
 
           # res_2 = "C : "
           # seq_2_bord.each do |slice|
-          #   res_2 += "#{match_organism.allignement[slice[0]..(slice[1])]}"
+          #   res_2 += "#{match_organism.alignment[slice[0]..(slice[1])]}"
           # end
           # puts res_2
           # puts "---------------"
@@ -134,16 +134,16 @@ class ExonGrouper
     match_organism_parts = []
     match_coords.each_with_index do |coord, index|
       if index == 0
-        organism_parts << organism.allignement[0..(coord-1)]#.gsub("UU","--")
-        match_organism_parts << match_organism.allignement[0..(coord-1)]#.gsub("UU","--")
+        organism_parts << organism.alignment[0..(coord-1)]#.gsub("UU","--")
+        match_organism_parts << match_organism.alignment[0..(coord-1)]#.gsub("UU","--")
         next
       end
-      organism_parts << organism.allignement[(match_coords[index-1]+2)..(coord-1)]#.gsub("UU","--")
-      match_organism_parts << match_organism.allignement[(match_coords[index-1]+2)..(coord-1)]#.gsub("UU","--")
+      organism_parts << organism.alignment[(match_coords[index-1]+2)..(coord-1)]#.gsub("UU","--")
+      match_organism_parts << match_organism.alignment[(match_coords[index-1]+2)..(coord-1)]#.gsub("UU","--")
     end
     if match_coords.length > 0
-      organism_parts << organism.allignement[(match_coords[-1]+2)..(-1)]#.gsub("UU","--")
-      match_organism_parts << match_organism.allignement[(match_coords[-1]+2)..(-1)]#.gsub("UU","--")
+      organism_parts << organism.alignment[(match_coords[-1]+2)..(-1)]#.gsub("UU","--")
+      match_organism_parts << match_organism.alignment[(match_coords[-1]+2)..(-1)]#.gsub("UU","--")
     end
     return ({"coords" => match_coords, "organism" => organism_parts, "match_organism" => match_organism_parts})
   end
@@ -155,14 +155,14 @@ class ExonGrouper
   def get_uu_coords(organism)
     i = -1
     all = []
-    while i = organism.allignement.index('UU', i+1)
+    while i = organism.alignment.index('UU', i+1)
       all << i
     end
     return all
   end
 
   def draw_as_svg_rectangels(data_to_show)
-    svg_width = self.organisms.first.allignement_length*2 + 200
+    svg_width = self.organisms.first.alignment_length*2 + 200
     svg_height = self.organisms.count * 40 + 40
     output_file_name = self.output_filename + "_#{data_to_show}"
     File.open("#{output_file_name}.svg", 'w') do |file|

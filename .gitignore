@@ -4,3 +4,6 @@
 *.csv
 *.zip
 *.fasta
+results/
+results_archive/
+reports/

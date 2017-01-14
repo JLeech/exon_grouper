@@ -163,7 +163,7 @@ class CatCatMatcher
 
   end
 
-  def count_blosum(main_allignement, matching_allignement, global = false)
+  def count_blosum(main_alignment, matching_alignment, global = false)
     current_affine_score = 0
     current_matching_spaces = 0
     current_deletion_1 = 0
@@ -172,8 +172,8 @@ class CatCatMatcher
     current_matching_letters = 0 
     current_mismatching_letters = 0
     start_gap_flag = true
-    main_allignement.split("").each_with_index do |seq_1_char, position|
-      seq_2_char = matching_allignement[position]
+    main_alignment.split("").each_with_index do |seq_1_char, position|
+      seq_2_char = matching_alignment[position]
       if seq_1_char == "-" || seq_2_char == "-"
         start_gap_flag = false
         if seq_1_char == "-" && seq_2_char == "-"
@@ -186,10 +186,10 @@ class CatCatMatcher
         end
       else
         start_gap_flag = true
-        blosum_score = cat_cat_proxy.blosum[seq_1_char][matching_allignement[position]]
+        blosum_score = cat_cat_proxy.blosum[seq_1_char][matching_alignment[position]]
         current_affine_score += blosum_score.nil? ? 0 : blosum_score
         current_usual_score += blosum_score.nil? ? 0 : blosum_score
-        if seq_1_char == matching_allignement[position]
+        if seq_1_char == matching_alignment[position]
           current_matching_letters += 1
         else
           current_mismatching_letters += 1
@@ -252,8 +252,8 @@ class CatCatMatcher
   end
 
   def self.clear_output_file(output_filename)
-    File.write("#{output_filename}_allignements.txt", '')
-    File.write("#{output_filename}_local_allignements.txt", '')
+    File.write("#{output_filename}_alignments.txt", '')
+    File.write("#{output_filename}_local_alignments.txt", '')
   end
 
 

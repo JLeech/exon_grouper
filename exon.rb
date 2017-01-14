@@ -2,7 +2,7 @@ class Exon
 
 	attr_accessor :start
 	attr_accessor :finish
-	attr_accessor :allignement
+	attr_accessor :alignment
 
 	attr_accessor :connections
 #	attr_accessor :real_connections
@@ -21,10 +21,10 @@ class Exon
 
 	attr_accessor :local_borders
 
-	def initialize(start, finish, allignement, organism_index = 1, exon_index = 1)
+	def initialize(start, finish, alignment, organism_index = 1, exon_index = 1)
 		self.start = start
 		self.finish = finish
-		self.allignement = allignement
+		self.alignment = alignment
 		self.connections = []
 #		self.real_connections = []
 		self.group = []
@@ -87,13 +87,13 @@ class Exon
 
 	def max_blossum(blossum)
 		max_score = 0.0
-		allignement.split("").each { |char| max_score += blossum[char][char] }
+		alignment.split("").each { |char| max_score += blossum[char][char] }
 		return max_score
 	end
 
 	def alignement_no_gap_length
 		counter = 0.0
-		self.allignement.each_char do |char|
+		self.alignment.each_char do |char|
 			counter += 1 if char != "-"
 		end
 		return counter
@@ -122,7 +122,7 @@ class Exon
 		puts "-----------------"
 		puts "#{self.start} - #{self.finish}"
 		puts "#{self.group}"
-		puts allignement
+		puts alignment
 		puts "-----------------"
 	end
 

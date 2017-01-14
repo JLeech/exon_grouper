@@ -221,19 +221,19 @@ class CatCatResult
       [rloc_1,rloc_2].max,
     ]
     CSV.open("#{file_path}.csv", "a") { |csv| csv << data}
-    save_allignement(file_path, proxy)
+    save_alignment(file_path, proxy)
   end
 
-  def save_allignement(file_path, proxy)
+  def save_alignment(file_path, proxy)
     output = ""
     output += "#{proxy.pair_id} Coords: #{proxy.coords} Exons_1: #{proxy.get_org_exons} Exons_2: #{proxy.get_match_org_exons}\n"
     output += "\"#{proxy.seq_1}\"\n\"#{proxy.seq_2}\"\n"
-    File.open("#{file_path}_allignements.txt", 'a') { |file| file.write(output) }
+    File.open("#{file_path}_alignments.txt", 'a') { |file| file.write(output) }
 
     output = ""
     output += "#{proxy.pair_id} Coords: #{proxy.coords} Exons_1: #{proxy.get_org_exons} Exons_2: #{proxy.get_match_org_exons}\n"
     output += "\"#{self.local_seq_1}\"\n\"#{self.local_seq_2}\"\n"
-    File.open("#{file_path}_local_allignements.txt", 'a') { |file| file.write(output) }
+    File.open("#{file_path}_local_alignments.txt", 'a') { |file| file.write(output) }
   end
 
 end
@@ -258,6 +258,7 @@ class LocalResult
     self.align_1 = results["align_1"]
     self.align_2 = results["align_2"]
     self.score = results["score"]
+    #File.open("PAIRSTAT_fras_30(ALL)", "a") { |file| file.write("#{self.score},") }
   end
 
   def from_start_1?
@@ -371,7 +372,7 @@ class IterSaver
       result << local.score_seq_2
       result << (local.score.to_f/local.score_seq_1).round(2)
       result << (local.score.to_f/local.score_seq_2).round(2)
-      CSV.open("#{proxy.file_path}_iters.csv", "a") { |csv| csv << result }  
+      CSV.open("#{proxy.file_path}_iters.csv", "a") { |csv| csv << result } 
     end
 
   end

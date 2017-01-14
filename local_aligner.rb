@@ -80,7 +80,7 @@
 # 			max_position = [max_position,current_way].transpose.map {|x| x.reduce(:+)}
 # 		end
 # 		start_positions = max_position
-# 		margin_al_1, margin_al_2 = margin_allignements(start_positions, end_positions, aligned_1.reverse, aligned_2.reverse)
+# 		margin_al_1, margin_al_2 = margin_alignments(start_positions, end_positions, aligned_1.reverse, aligned_2.reverse)
 # 		results = { 
 # 			"start_positions" => start_positions,
 # 			"end_positions" => end_positions,
@@ -164,7 +164,7 @@
 # 		end
 # 	end 
 
-# 	def margin_allignements(start_positions, end_positions, al1, al2)
+# 	def margin_alignments(start_positions, end_positions, al1, al2)
 #         coords_1 = [start_positions[0], end_positions[0]]
 #         coords_2 = [start_positions[1], end_positions[1]]
 #         margin_al_1 = ""

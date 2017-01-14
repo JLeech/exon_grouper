@@ -19,8 +19,8 @@ def check_options(options)
     return false
   end
 
-  if options["allignement"].nil?
-    puts "no allignement selected"
+  if options["alignment"].nil?
+    puts "no alignment selected"
     return false
   end
   

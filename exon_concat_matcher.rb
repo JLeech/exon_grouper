@@ -73,7 +73,7 @@
 
 #     def count_everything(params = {})
 #         parse_seq
-#         margin_allignements if params[:alligned].nil?
+#         margin_alignments if params[:alligned].nil?
 #         self.affine_score, self.usual_score = count_blosum
 #         self.seq_1_score, _ = count_blosum(self.seq_1, self.seq_1, false)
 #         self.seq_2_score, _ = count_blosum(self.seq_2, self.seq_2, false)
@@ -102,7 +102,7 @@
 #         self.exon_2 = Exon.new(self.coords_2[0], self.coords_2[1], self.seq_2)
 #     end
 
-#     def margin_allignements
+#     def margin_alignments
 #         start_diff = coords_1[0] - coords_2[0]
 #         if start_diff > 0
 #             self.added_spaces += start_diff
@@ -122,7 +122,7 @@
 #         end
 #     end
 
-#     def count_blosum(main_allignement = self.seq_1, matching_allignement = self.seq_2, global = true)
+#     def count_blosum(main_alignment = self.seq_1, matching_alignment = self.seq_2, global = true)
 #         current_affine_score = 0
 #         current_matching_spaces = 0
 #         current_deletion_1 = 0
@@ -132,8 +132,8 @@
 #         current_mismatching_letters = 0
 
 #         start_gap_flag = true
-#         main_allignement.split("").each_with_index do |seq_1_char, position|
-#             seq_2_char = matching_allignement[position]
+#         main_alignment.split("").each_with_index do |seq_1_char, position|
+#             seq_2_char = matching_alignment[position]
 #             if seq_1_char == "-" || seq_2_char == "-"
 #                 start_gap_flag = false
 #                 if seq_1_char == "-" && seq_2_char == "-"
@@ -147,10 +147,10 @@
 #                 end
 #             else
 #                 start_gap_flag = true
-#                 blosum_score = blosum[seq_1_char][matching_allignement[position]]
+#                 blosum_score = blosum[seq_1_char][matching_alignment[position]]
 #                 current_affine_score += blosum_score.nil? ? 0 : blosum_score
 #                 current_usual_score += blosum_score.nil? ? 0 : blosum_score
-#                 if seq_1_char == matching_allignement[position]
+#                 if seq_1_char == matching_alignment[position]
 #                     current_matching_letters += 1
 #                 else
 #                     current_mismatching_letters += 1
@@ -175,13 +175,13 @@
 #         #output += "\"#{self.seq_1}\"\n"
 #         #output += "\"#{self.seq_2}\"\n"
 #         output += close_exons
-#         File.open("#{output_filename}_allignements.txt", 'a') { |file| file.write(output) }
+#         File.open("#{output_filename}_alignments.txt", 'a') { |file| file.write(output) }
 
 #         output = ""
 #         output += "#{self.sequence_data[:pair_id]} #{self.sequence_data[:exon_index]} #{self.sequence_data[:match_exon_index]} \n"
 #         output += "\"#{self.local_data['align_1']}\"\n"
 #         output += "\"#{self.local_data['align_2']}\"\n"
-#         File.open("#{output_filename}_local_allignements.txt", 'a') { |file| file.write(output) }
+#         File.open("#{output_filename}_local_alignments.txt", 'a') { |file| file.write(output) }
 #     end
 
 #     def close_exons
@@ -189,23 +189,23 @@
 #         seq_2_updated = ""
 
 #         if self.coords_1[0] > self.coords_2[0]
-#             seq_1_updated += organism.allignement[self.coords_2[0]..(self.coords_1[0]-1)].downcase
+#             seq_1_updated += organism.alignment[self.coords_2[0]..(self.coords_1[0]-1)].downcase
 #         elsif self.coords_1[0] < self.coords_2[0]
-#             seq_2_updated += match_organism.allignement[self.coords_1[0]..(self.coords_2[0]-1)].downcase
+#             seq_2_updated += match_organism.alignment[self.coords_1[0]..(self.coords_2[0]-1)].downcase
 #         end
 
-#         seq_1_updated += organism.allignement[self.coords_1[0]..self.coords_1[1]]
-#         seq_2_updated += match_organism.allignement[self.coords_2[0]..self.coords_2[1]]
+#         seq_1_updated += organism.alignment[self.coords_1[0]..self.coords_1[1]]
+#         seq_2_updated += match_organism.alignment[self.coords_2[0]..self.coords_2[1]]
 
 #         if self.coords_1[1] > self.coords_2[1]
-#             seq_2_updated += match_organism.allignement[(self.coords_2[1]+1)..self.coords_1[1]].downcase
+#             seq_2_updated += match_organism.alignment[(self.coords_2[1]+1)..self.coords_1[1]].downcase
 #         elsif self.coords_1[1] < self.coords_2[1]
-#             seq_1_updated += organism.allignement[(self.coords_1[1]+1)..self.coords_2[1]].downcase
+#             seq_1_updated += organism.alignment[(self.coords_1[1]+1)..self.coords_2[1]].downcase
 #         end                
 
 #         return "\"#{seq_1_updated}\"\n\"#{seq_2_updated}\"\n"
 
-#         #puts organism.allignement[self.coords_1[0]..self.coords_1[1]]
+#         #puts organism.alignment[self.coords_1[0]..self.coords_1[1]]
 #         #puts self.seq_2
 #     end
 
@@ -242,8 +242,8 @@
 #   end
 
 #     def print_for_csv(output_filename)
-#         exon_1_length = self.exon_1.allignement.gsub("-","").length
-#         exon_2_length = self.exon_2.allignement.gsub("-","").length
+#         exon_1_length = self.exon_1.alignment.gsub("-","").length
+#         exon_2_length = self.exon_2.alignment.gsub("-","").length
 #         data = [
 #                 self.sequence_data[:pair_id],
 #                 self.sequence_data[:org_name],
@@ -296,8 +296,8 @@
 #     end
 
 #     def self.clear_output_file(output_filename)
-#         File.write("#{output_filename}_allignements.txt", '')
-#         File.write("#{output_filename}_local_allignements.txt", '')
+#         File.write("#{output_filename}_alignments.txt", '')
+#         File.write("#{output_filename}_local_alignments.txt", '')
 #     end
 
 #     def self.csv_header(output_csv)

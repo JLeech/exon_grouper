@@ -8,9 +8,9 @@ class DataProcessor
 	attr_accessor :raw_data
 	attr_accessor :organisms
 
-	def initialize(path_to_data_file, path_to_allignement_file)
+	def initialize(path_to_data_file, path_to_alignment_file)
 		@raw_data = CSV.read(path_to_data_file)
-		@path_to_allignement_file = path_to_allignement_file
+		@path_to_alignment_file = path_to_alignment_file
 		@organisms = []	
 	end
 
@@ -48,14 +48,14 @@ private
 		parsed_coords_and_name = row.join(",").split(";")
 		coordinates = parsed_coords_and_name[1..(-1)]
 		organism_name = parsed_coords_and_name.first.strip
-		organism_allignement = get_allignement_for_organism(organism_name)
+		organism_alignment = get_alignment_for_organism(organism_name)
 		# парсит csv и сохраняет экзоны в организмы
 		coordinates.each_with_index do |exon_coordinates, exon_index|
 			exon_start, exon_finish = get_coords(exon_coordinates)
-			current_exons.push( Exon.new(exon_start, exon_finish, organism_allignement[exon_start..exon_finish], index, exon_index) )
+			current_exons.push( Exon.new(exon_start, exon_finish, organism_alignment[exon_start..exon_finish], index, exon_index) )
 		end
 
-		organism = Organism.new(organism_name, current_exons, index, organism_allignement)
+		organism = Organism.new(organism_name, current_exons, index, organism_alignment)
 		return organism
 	end
 
@@ -63,19 +63,19 @@ private
 		return coords_block.gsub("(","").gsub(")","").gsub(" ","").split(",").map(&:to_i)
 	end
 
-	def get_allignement_for_organism(organism_name)
+	def get_alignment_for_organism(organism_name)
 		found_flag = false
-		allignement_string = ""
-		File.readlines(@path_to_allignement_file).each do |line|
+		alignment_string = ""
+		File.readlines(@path_to_alignment_file).each do |line|
 			if found_flag
 				break if line.start_with?(">")
-				allignement_string += line.strip
+				alignment_string += line.strip
 			else
 				if line.start_with?(">")
 					found_flag = true if line.split("|")[1] == organism_name 
 				end
 			end
 		end
-		return allignement_string
+		return alignment_string
 	end
 end
