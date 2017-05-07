@@ -16,7 +16,7 @@ class Organism
     self.alignment_length = alignment.length
     self.alignment = alignment
     self.code_name = name.split("_").map { |val| val[0..2] }.join("_")
-    puts "#{name} : #{code_name}"
+    #puts "#{name} : #{code_name}"
   end
 
   def save_references(file_path)

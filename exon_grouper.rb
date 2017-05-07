@@ -41,8 +41,8 @@ class ExonGrouper
   def prepare_data
     # отбираются только первые self.organism_number организмов
     all_organisms = DataProcessor.new(self.path_to_file, self.path_to_alignment).prepare
-    self.organisms = all_organisms[0..(self.organism_number-1)]
-    #self.organisms = [all_organisms[3],all_organisms[4]]
+    #self.organisms = all_organisms[0..(self.organism_number-1)]
+    self.organisms = [all_organisms[0], all_organisms[17]]
     clear_output_file
     Organism.set_headers(output_filename)
     self.organisms.each{ |org| org.save_references(output_filename) }
@@ -50,11 +50,11 @@ class ExonGrouper
 
   def group
     time1 = Time.now
-    exons = []
     count_cat_cat_statistics
   end
 
   def count_cat_cat_statistics
+    # подготовка файла статистики
     CatCatMatcher.csv_header(output_filename)
     CatCatMatcher.clear_output_file(output_filename)
     pair_counter = 0
@@ -63,13 +63,13 @@ class ExonGrouper
       puts "ORG: #{organism.name}"
       break if index+1 == self.organisms.length
       self.organisms[(index+1)..-1].each do |match_organism|
-        splits = get_cat_cat_splits(organism, match_organism)
+        splits = get_cat_cat_splits(organism, match_organism) # {"coords", "organism", "match_organism"}
         puts "  -> #{match_organism.name}"
         current_split_offset = 0
         exons_in_splits = ExonsSplitsIds.new(splits, organism, match_organism)
         splits["organism"].each_with_index do |org_part, part_index|
 
-          coords = part_index == 0 ? [0, splits["coords"][0]] : [splits["coords"][part_index-1]+2, splits["coords"][part_index]]
+          coords = part_index == 0 ? [0, splits["coords"][0]] : [splits["coords"][part_index-1]+2, splits["coords"][part_index]] # +2, because of UU
           
           if part_index == (splits["organism"].length-1)
             coords = [splits["coords"][part_index-1], splits["coords"][part_index-1] + splits["organism"][-1].length + 2 ]
@@ -105,10 +105,10 @@ class ExonGrouper
           # end
           # puts res_2
           # puts "---------------"
-          if cat_cat_matcher.has_multiple?
-            con_cat_matcher = ConCatMatcher.new(cat_cat_proxy)
-            con_cat_matcher.align
-          end
+          # if cat_cat_matcher.has_multiple?
+          #   con_cat_matcher = ConCatMatcher.new(cat_cat_proxy)
+          #   con_cat_matcher.align
+          # end
           self.local_borders[organism.name] += seq_1_bord
           self.local_borders[match_organism.name] += seq_2_bord
           pair_counter += 1
@@ -128,8 +128,7 @@ class ExonGrouper
     organism_coords = get_uu_coords(organism)
     match_organism_coords = get_uu_coords(match_organism)
     match_coords = organism_coords & match_organism_coords
-    #exon_distribution = { "ex_dist_organism" => get_exon_dist(organism_coords,match_coords),
-    #                      "ex_dist_match_organism" => get_exon_dist(match_organism_coords,match_coords)}
+
     organism_parts = []
     match_organism_parts = []
     match_coords.each_with_index do |coord, index|
@@ -209,8 +208,8 @@ private
     header = "ex1,ex2,pair_id,st1,end1,st2,end2\n"
     File.open("#{self.output_filename}_borders.txt", 'w') { |file| file.write(header) }
     IterSaver.header(self.output_filename)
-    ConCatMatcher.header(self.output_filename)
-    ConCatMatcher.alignements_header(self.output_filename)
+    #ConCatMatcher.header(self.output_filename)
+    #ConCatMatcher.alignements_header(self.output_filename)
   end
 
   def get_pair_id(number, org_num, match_org_num)

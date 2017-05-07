@@ -113,8 +113,6 @@ class CatCatMatcher
   end
 
   def set_exons_for_locals(locals)
-    org_exons = cat_cat_proxy.get_org_exons_raw
-    m_org_exons = cat_cat_proxy.get_match_org_exons_raw
     cur_org_ex_index = 0 
     cur_local_index = 0
 
