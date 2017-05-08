@@ -79,12 +79,6 @@ class Exon
 		return connects
 	end
 
-	# def collect_cliques
-	# 	if !real_connections.empty?
-	# 		self.cliques = real_connections.map(&:cliques).flatten.uniq
-	# 	end
-	# end
-
 	def max_blossum(blossum)
 		max_score = 0.0
 		alignment.split("").each { |char| max_score += blossum[char][char] }
@@ -98,17 +92,6 @@ class Exon
 		end
 		return counter
 	end
-
-	# def has_local_overlap?
-	# 	return false if local_borders.empty?
-	# 	starts = self.local_borders.map(&:first)
-	# 	ends = self.local_borders.map(&:last)
-	# 	if starts.sort.last > ends.sort.first
-	# 		return true
-	# 	else
-	# 		return false
-	# 	end
-	# end
 
 	def get_coords
 		return [start, finish]

@@ -1,3 +1,43 @@
+class Split
+
+  SINGLE = 1
+  NORMAL = 2
+
+  attr_accessor :organism
+  attr_accessor :match_organism
+  attr_accessor :seq_1
+  attr_accessor :seq_2
+
+  attr_accessor :start_coord
+  attr_accessor :end_coord
+
+  attr_accessor :type
+  attr_accessor :org_exons_1
+  attr_accessor :org_exons_2
+
+  def initialize(organism, match_organism, seq_1="", seq_2="", start_coord, end_coord, type)
+    self.organism = organism
+    self.match_organism = match_organism
+    self.seq_1 = seq_1
+    self.seq_2 = seq_2
+    self.start_coord = start_coord
+    self.end_coord = end_coord
+    self.type = type
+    self.org_exons_1 = []
+    self.org_exons_2 = []
+  end
+
+  def print
+    puts "S: #{start_coord}"
+    puts "E: #{end_coord}"
+    puts "E1: #{org_exons_1}"
+    puts "E2: #{org_exons_2}"
+    puts "#{seq_1}"
+    puts "#{seq_2}"
+  end
+
+end
+
 class ExonsSplitsIds
 
   attr_accessor :organism_number
@@ -12,14 +52,14 @@ class ExonsSplitsIds
 
   def get_ids_for_organism
     if @ids_for_organism.nil?
-      @ids_for_organism = count_ids(splits["organism"], organism_number)
+      @ids_for_organism = count_ids(splits.map(&:seq_1), organism_number)
     end
     return @ids_for_organism 
   end
 
   def get_ids_for_match_organism
     if @ids_for_match_organism.nil?
-      @ids_for_match_organism = count_ids(splits["match_organism"], match_organism_number)
+      @ids_for_match_organism = count_ids(splits.map(&:seq_2), match_organism_number)
     end
     return @ids_for_match_organism
   end
@@ -28,12 +68,19 @@ class ExonsSplitsIds
     exon_org_ids = []
     last_id_count = 0
     org_splits.each do |org_split|
-      number_of_exons_in_split = org_split.split("UU").length
+      number_of_exons_in_split = org_split.gsub("-","").split("UU").length
       current_ids = (1..( number_of_exons_in_split )).to_a.map{ |num|  "#{ (org_number+1)*100+num+last_id_count}"  }
       last_id_count += number_of_exons_in_split
       exon_org_ids << current_ids
     end
     return exon_org_ids
+  end
+
+  def set_to_splits
+    splits.each_with_index do |split, index|
+    split.org_exons_1 = get_ids_for_organism[index]
+    split.org_exons_2 = get_ids_for_match_organism[index]
+    end
   end
 
 end

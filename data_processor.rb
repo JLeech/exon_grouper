@@ -31,7 +31,6 @@ class DataProcessor
 				alphabet = line.strip.split(" ")
 				next
 			end
-
 			values_array = line.strip.split(" ")
 			alphabet.length.times { |pos| tmp_array += [alphabet[pos], values_array[pos].to_i] }
 			blossum_matrix[alphabet[index - 3]] = Hash[*tmp_array]
