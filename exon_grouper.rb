@@ -41,7 +41,7 @@ class ExonGrouper
     # отбираются только первые self.organism_number организмов
     all_organisms = DataProcessor.new(self.path_to_file, self.path_to_alignment).prepare
     #self.organisms = all_organisms[0..(self.organism_number-1)]
-    self.organisms = [all_organisms[0], all_organisms[2]]
+    self.organisms = [all_organisms[4], all_organisms[14]]
     clear_output_file
     Organism.set_headers(output_filename)
     self.organisms.each{ |org| org.save_references(output_filename) }
@@ -65,7 +65,20 @@ class ExonGrouper
         splits = get_cat_cat_splits(organism, match_organism) # {"coords", "organism", "match_organism"}
         exons_in_splits = ExonsSplitsIds.new(splits, organism, match_organism)
         exons_in_splits.set_to_splits
-        splits.map(&:print)
+        split_points = Points.new(organism, match_organism)
+        splits.each_with_index do |split, split_index|
+            #split.print
+          pair_id = get_pair_id( split_index, organism.number, match_organism.number )
+          proxy = CatCatProxy.new(pair_id, split, self.blossum_matrix)
+          cat_cat_matcher = CatCatMatcher.new(proxy)
+          cat_cat_result = cat_cat_matcher.make_local
+          split_points.make_points(cat_cat_result, split)
+        end
+
+
+
+
+
       #   current_split_offset = 0
       #   exons_in_splits = ExonsSplitsIds.new(splits, organism, match_organism)
         # (0..splits.length).each do |index|
@@ -73,60 +86,60 @@ class ExonGrouper
         #   puts "#{exons_in_splits.get_ids_for_match_organism[index]}"
         # end
 
-      #   splits["organism"].each_with_index do |org_part, part_index|
+        #   splits["organism"].each_with_index do |org_part, part_index|  
 
-      #     coords = part_index == 0 ? [0, splits["coords"][0]] : [splits["coords"][part_index-1]+2, splits["coords"][part_index]] # +2, because of UU
-          
-      #     if part_index == (splits["organism"].length-1)
-      #       coords = [splits["coords"][part_index-1], splits["coords"][part_index-1] + splits["organism"][-1].length + 2 ]
-      #     end
-      #     match_org_part = splits["match_organism"][part_index]
-          
-      #     sequences = [org_part, match_org_part]
-      #     cat_cat_proxy = CatCatProxy.new(sequences, coords, self.blossum_matrix, organism, match_organism, 
-      #                                     get_pair_id( part_index, organism.number, match_organism.number ),
-      #                                     exons_in_splits, part_index, output_filename)
-      #     cat_cat_matcher = CatCatMatcher.new(cat_cat_proxy)
-      #     cat_cat_matcher.count_statistics
-      #     cat_cat_matcher.save_to_csv(output_filename)
-      #     # puts "O : #{org_part}"
-      #     # puts "M : #{match_org_part}"
-      #     # puts "\n"
-      #     seq_1_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_1
-      #     seq_2_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_2
-          
-      #     seq_1_bord = seq_1_bord.each_slice(2).to_a.map { |slice| slice.map{ |val| val+current_split_offset } }
-      #     seq_2_bord = seq_2_bord.each_slice(2).to_a.map { |slice| slice.map{ |val| val+current_split_offset } }
-      #     # puts "LB: #{seq_1_bord}"
-      #     # puts "LB: #{seq_2_bord}"
-      #     # res_1 = "C : "
-      #     # seq_1_bord.each do |slice|
-      #     #   res_1 += "#{organism.alignment[slice[0]..(slice[1])]}"
-      #     # end
-      #     # puts res_1
+        #     coords = part_index == 0 ? [0, splits["coords"][0]] : [splits["coords"][part_index-1]+2, splits["coords"][part_index]] # +2, because of UU
+            
+        #     if part_index == (splits["organism"].length-1)
+        #       coords = [splits["coords"][part_index-1], splits["coords"][part_index-1] + splits["organism"][-1].length + 2 ]
+        #     end
+        #     match_org_part = splits["match_organism"][part_index]
+            
+        #     sequences = [org_part, match_org_part]
+        #     cat_cat_proxy = CatCatProxy.new(sequences, coords, self.blossum_matrix, organism, match_organism, 
+        #                                     get_pair_id( part_index, organism.number, match_organism.number ),
+        #                                     exons_in_splits, part_index, output_filename)
+        #     cat_cat_matcher = CatCatMatcher.new(cat_cat_proxy)
+        #     cat_cat_matcher.count_statistics
+        #     cat_cat_matcher.save_to_csv(output_filename)
+        #     # puts "O : #{org_part}"
+        #     # puts "M : #{match_org_part}"
+        #     # puts "\n"
+        #     seq_1_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_1
+        #     seq_2_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_2
+            
+        #     seq_1_bord = seq_1_bord.each_slice(2).to_a.map { |slice| slice.map{ |val| val+current_split_offset } }
+        #     seq_2_bord = seq_2_bord.each_slice(2).to_a.map { |slice| slice.map{ |val| val+current_split_offset } }
+        #     # puts "LB: #{seq_1_bord}"
+        #     # puts "LB: #{seq_2_bord}"
+        #     # res_1 = "C : "
+        #     # seq_1_bord.each do |slice|
+        #     #   res_1 += "#{organism.alignment[slice[0]..(slice[1])]}"
+        #     # end
+        #     # puts res_1  
 
-      #     # res_2 = "C : "
-      #     # seq_2_bord.each do |slice|
-      #     #   res_2 += "#{match_organism.alignment[slice[0]..(slice[1])]}"
-      #     # end
-      #     # puts res_2
-      #     # puts "---------------"
-      #     # if cat_cat_matcher.has_multiple?
-      #     #   con_cat_matcher = ConCatMatcher.new(cat_cat_proxy)
-      #     #   con_cat_matcher.align
-      #     # end
-      #     self.local_borders[organism.name] += seq_1_bord
-      #     self.local_borders[match_organism.name] += seq_2_bord
-      #     pair_counter += 1
-      #     current_split_offset += org_part.length+2
-      #   end
-      # end
-      # # puts "#{local_borders}"
-      # border_data = "organism:   #{organism.name}\n"
-      # border_data +="starts:     #{local_borders[organism.name].map{ |pair| pair[0] }}\n"
-      # border_data +="ends:       #{local_borders[organism.name].map{ |pair| pair[1] }}\n"
+        #     # res_2 = "C : "
+        #     # seq_2_bord.each do |slice|
+        #     #   res_2 += "#{match_organism.alignment[slice[0]..(slice[1])]}"
+        #     # end
+        #     # puts res_2
+        #     # puts "---------------"
+        #     # if cat_cat_matcher.has_multiple?
+        #     #   con_cat_matcher = ConCatMatcher.new(cat_cat_proxy)
+        #     #   con_cat_matcher.align
+        #     # end
+        #     self.local_borders[organism.name] += seq_1_bord
+        #     self.local_borders[match_organism.name] += seq_2_bord
+        #     pair_counter += 1
+        #     current_split_offset += org_part.length+2
+        #   end
+        # end
+        # # puts "#{local_borders}"
+        # border_data = "organism:   #{organism.name}\n"
+        # border_data +="starts:     #{local_borders[organism.name].map{ |pair| pair[0] }}\n"
+        # border_data +="ends:       #{local_borders[organism.name].map{ |pair| pair[1] }}\n" 
 
-      # File.open("#{self.output_filename}_borders.txt", 'a') { |file| file.write(border_data) }
+        # File.open("#{self.output_filename}_borders.txt", 'a') { |file| file.write(border_data) }
       end
     end
   end
@@ -173,10 +186,6 @@ class ExonGrouper
       splits << Split.new(organism, match_organism, organism_part, match_organism_part, start_coord,end_coord,Split::SINGLE)
     end
     return splits
-  end
-
-  def get_exons_numbers_from_splits(splits)
-    exons_organism_ids = []
   end
 
   def get_uu_coords(organism)

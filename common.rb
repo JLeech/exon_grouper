@@ -87,108 +87,24 @@ end
 
 class CatCatProxy
 
-  attr_accessor :sequences
-  attr_accessor :coords
-  attr_accessor :blosum
-  attr_accessor :organism
-  attr_accessor :match_organism
   attr_accessor :pair_id
-  attr_accessor :exons_ids
-  attr_accessor :split_index
-  attr_accessor :file_path
+  attr_accessor :split
+  attr_accessor :blosum
 
-  def initialize(sequences = [], coords = [], blosum = nil, organism, match_organism, pair_id, exons_ids, split_index, file_path)
-    self.sequences = sequences
-    self.coords = coords
-    self.blosum = blosum.nil? ? DataProcessor.parse_blossum : blosum
-    self.organism = organism
-    self.match_organism = match_organism
+  def initialize(pair_id, split, blosum )
     self.pair_id = pair_id
-    self.exons_ids = exons_ids
-    self.split_index = split_index
-    self.file_path = file_path
-  end
-
-  def seq_1
-    self.sequences[0]
-  end
-
-  def seq_2 
-    self.sequences[1]
-  end
-
-  def get_org_exons_raw
-    exons_ids.get_ids_for_organism[self.split_index]
-  end
-
-  def get_org_exons 
-    get_org_exons_raw.join(",")
-  end
-
-  def get_org_exons_count 
-    get_org_exons_raw.length
-  end
-
-  def get_match_org_exons_raw
-    exons_ids.get_ids_for_match_organism[self.split_index]
-  end
-
-  def get_match_org_exons
-    get_match_org_exons_raw.join(",")
-  end
-
-  def get_match_org_exons_count
-    get_match_org_exons_raw.length
+    self.split = split
+    self.blosum = blosum
   end
 
 end
 
 class CatCatResult
 
-  attr_accessor :added_spaces
-  attr_accessor :matching_spaces
-  attr_accessor :matching_letters
-  attr_accessor :mismatching_letters
-  attr_accessor :affine_score
-  attr_accessor :usual_score
-
-  attr_accessor :deletions_1
-  attr_accessor :deletions_2
-
-  attr_accessor :seq_1_score
-  attr_accessor :seq_2_score
-
-  attr_accessor :local_score
-  attr_accessor :local_self_1_score
-  attr_accessor :local_self_2_score
-
-  attr_accessor :local_borders_seq_1
-  attr_accessor :local_borders_seq_2
-
   attr_accessor :local_iters
   attr_accessor :locals
 
   def initialize
-    self.added_spaces = 0
-    self.matching_spaces = 0
-    self.matching_letters = 0
-    self.mismatching_letters = 0
-    self.affine_score = 0
-    self.usual_score = 0
-
-    self.deletions_1 = 0
-    self.deletions_2 = 0
-
-    self.seq_1_score = 0
-    self.seq_2_score = 0
-
-    self.local_score = 0
-    self.local_self_1_score = 0
-    self.local_self_2_score = 0
-
-    self.local_borders_seq_1 = []
-    self.local_borders_seq_2 = []
-
     self.local_iters = 0
   end
 
@@ -199,18 +115,6 @@ class CatCatResult
 
   end
 
-  def print
-    puts ": #{added_spaces}"
-    puts ": #{matching_spaces}"
-    puts ": #{matching_letters}"
-    puts ": #{mismatching_letters}"
-    puts ": #{affine_score}"
-    puts ": #{usual_score}"
-    puts ": #{deletions_1}"
-    puts ": #{deletions_2}"
-    puts ": #{seq_1_score}"
-    puts ": #{seq_2_score}"
-  end
 
   def local_seq_1
     return locals.map{ |local| local.get_formatted_seq(1) }.join("")
@@ -220,55 +124,12 @@ class CatCatResult
     return locals.map{ |local| local.get_formatted_seq(2) }.join("")
   end
 
-  def save(file_path, proxy)
-    aff_seq_1 = (self.affine_score/self.seq_1_score.to_f).round(2)
-    aff_seq_2 = (self.affine_score/self.seq_2_score.to_f).round(2)
-    rloc_1 = (self.local_score+0.01)/aff_seq_1.to_f
-    rloc_2 = (self.local_score+0.01)/aff_seq_2.to_f
-    data = [
-      proxy.pair_id,
-      proxy.organism.name,
-      proxy.match_organism.name,
-      proxy.organism.code_name,
-      proxy.match_organism.code_name,
-      proxy.get_org_exons,
-      proxy.get_match_org_exons,
-      proxy.get_org_exons_count,
-      proxy.get_match_org_exons_count,
-      [proxy.get_org_exons_count,proxy.get_match_org_exons_count].max,
-      [proxy.get_org_exons_count,proxy.get_match_org_exons_count].min,
-      proxy.coords[0],
-      proxy.coords[1],
-      proxy.coords[1]-proxy.coords[0],
-      self.seq_1_score,
-      self.seq_2_score,
-      self.affine_score,
-      aff_seq_1,
-      aff_seq_2,
-      [aff_seq_1, aff_seq_2].min,
-      "",
-      ""
-    ]
-    #puts self.affine_score
-    #local values
-    data += [
-      self.local_score,
-      self.local_score.to_f-self.affine_score,
-      self.local_self_1_score,
-      self.local_self_2_score,
-      self.local_score.to_f/[self.local_self_1_score,self.local_self_2_score].max,
-      self.local_score/self.local_self_1_score.to_f,
-      self.local_score/self.local_self_2_score.to_f,
-      "",
-      "",
-      [self.local_self_1_score, self.local_self_2_score].min.to_f,
-      rloc_1,
-      rloc_2,
-      [rloc_1,rloc_2].min,
-      [rloc_1,rloc_2].max,
-    ]
-    CSV.open("#{file_path}.csv", "a") { |csv| csv << data}
-    save_alignment(file_path, proxy)
+  def local_seq_1_for_coords
+    return locals.map{ |local| local.get_for_coords_seq(1) }.join("")
+  end
+
+  def local_seq_2_for_coords
+    return locals.map{ |local| local.get_for_coords_seq(2) }.join("")
   end
 
   def save_alignment(file_path, proxy)
@@ -285,6 +146,130 @@ class CatCatResult
 
 end
 
+class Points
+
+  attr_accessor :organism
+  attr_accessor :match_organism
+  attr_accessor :points
+
+  def initialize(organism, match_organism)
+    self.organism = organism
+    self.match_organism = match_organism
+    self.points = []
+  end
+
+  def make_points(cat_res, split)
+    local_seq_1 = cat_res.local_seq_1_for_coords
+    local_seq_2 = cat_res.local_seq_2_for_coords
+    good_uu_coords_seq_1 = get_good_uu_coords(local_seq_1)
+    good_uu_coords_seq_2 = get_good_uu_coords(local_seq_2)
+    bad_uu_coords_seq_1 = get_bad_uu_coords(local_seq_1)
+    bad_uu_coords_seq_2 = get_bad_uu_coords(local_seq_2)
+    
+    puts "#{split.seq_1}"
+    puts "#{split.seq_2}"
+    puts "----"
+    puts "#{local_seq_1}"
+    puts "#{local_seq_2}"
+    puts "#{good_uu_coords_seq_1}"
+    puts "#{good_uu_coords_seq_2}"
+    puts "#{bad_uu_coords_seq_1}"
+    puts "#{bad_uu_coords_seq_2}"
+    puts "--------------------------"
+
+    good_uu_coords_seq_1.each do |coord|
+      puts "Y : #{split.seq_2[0..(get_coords_in_align(split.seq_2, local_seq_2, coord))]}"
+    end
+    bad_uu_coords_seq_1.each do |coord|
+      puts "Y : #{split.seq_2[0..(get_coords_in_align(split.seq_2, local_seq_2, coord))]} "
+    end
+
+    good_uu_coords_seq_2.each do |coord|
+      puts "Y : #{split.seq_1[0..(get_coords_in_align(split.seq_1, local_seq_1, coord))]} "
+    end
+    bad_uu_coords_seq_2.each do |coord|
+      puts "Y : #{split.seq_1[0..(get_coords_in_align(split.seq_1, local_seq_1, coord))]} "
+    end
+
+
+
+  end
+
+  private
+
+  def get_good_uu_coords(sequence)
+    i = -1
+    all = []
+    while i = sequence.index('UU', i+1)
+      all << i
+    end
+    return all
+  end
+
+  def get_bad_uu_coords(sequence)
+    i = -1
+    all = []
+    while i = sequence.index('uu', i+1)
+      all << i
+    end
+    return all
+  end
+
+  def get_coords_in_align(sequence, local, coord)
+    return (get_align_coords(sequence, get_letters_before(local,coord))-1)
+  end
+
+  def get_letters_before(sequence, coord)
+    return sequence[0..(coord-1)].gsub("-","").length
+  end
+
+  def get_align_coords(sequence, coord)
+    result = 0
+    (sequence.length-1).times do |pos|
+      coord -= 1 if sequence[pos] != "-"
+      #result << sequence[pos]
+      result += 1
+      break if coord == 0
+    end
+    return result
+  end
+
+
+end
+
+class SplitPoint
+
+  OCCURATE = 0
+  FUZZY = 1
+  UU = 2
+
+  attr_accessor :start
+  attr_accessor :finish
+  attr_accessor :type
+  attr_accessor :seq_number
+
+  def close_reg(finish)
+    if type == SplitPoint::FUZZY
+      self.finish = finish
+    else
+      self.finish = start
+    end
+  end
+
+  def is_occurate?
+    return type == SplitPoint::OCCURATE
+  end
+
+  def is_fuzzy?
+    return type == SplitPoint::FUZZY
+  end
+
+  def is_uu?
+    return type == SplitPoint::UU
+  end
+
+end
+
 class LocalResult
 
   attr_accessor :start_positions
@@ -292,12 +277,6 @@ class LocalResult
   attr_accessor :align_1
   attr_accessor :align_2
   attr_accessor :score
-
-  attr_accessor :connected_exons
-  attr_accessor :connected_coords
-  attr_accessor :first_coverage
-  attr_accessor :last_coverage
-  attr_accessor :current_exon
 
   def initialize(results)
     self.start_positions = results["start_positions"]
@@ -343,9 +322,7 @@ class LocalResult
   def aligns
     return [align_1, align_2]
   end
-
 end
-
 
 class LocalReqursiveResult
 
@@ -356,26 +333,22 @@ class LocalReqursiveResult
   attr_accessor :seq_2
   attr_accessor :index
   attr_accessor :type
-  attr_accessor :seq1_exons_ids
-  attr_accessor :seq2_exons_ids
-  attr_accessor :score
-  attr_accessor :score_seq_1
-  attr_accessor :score_seq_2
+  attr_accessor :coords_org_1
+  attr_accessor :coords_org_2
 
   def initialize(seq_1, seq_2, type, index = 9999)
     self.seq_1 = seq_1
     self.seq_2 = seq_2
     self.index = index
     self.type = type
-    self.seq1_exons_ids = []
-    self.seq2_exons_ids = []
-    self.score = 0
-    self.score_seq_1 = 0
-    self.score_seq_2 = 0
   end
 
   def get_formatted
     return [get_formatted_seq(1), get_formatted_seq(2)]
+  end
+
+  def get_for_coords
+    return [get_for_coords_seq(1), get_for_coords_seq(2)]
   end
 
   def get_formatted_seq(seq_number)
@@ -387,14 +360,13 @@ class LocalReqursiveResult
   end
 
   def get_for_coords_seq(seq_number)
-    type_mark = type == GOOD ? "+" : "|"
-    return "#{type_mark}"+self.send("seq_#{seq_number}")+"#{type_mark}"
+    return self.send("seq_#{seq_number}") if type == GOOD
+    return self.send("seq_#{seq_number}").downcase
   end
 
   def get_raw
     return [seq_1, seq_2]
   end
-
 end
 
 class IterSaver

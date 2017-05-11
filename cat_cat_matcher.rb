@@ -7,61 +7,18 @@ require_relative "common.rb"
 class CatCatMatcher
 
   attr_accessor :cat_cat_proxy
-  attr_accessor :cat_cat_result
 
   def initialize(cat_cat_proxy)
     self.cat_cat_proxy = cat_cat_proxy
-    self.cat_cat_result = CatCatResult.new
-  end
-
-  def count_statistics
-    cat_cat_result.affine_score, cat_cat_result.usual_score = count_blosum(cat_cat_proxy.seq_1, cat_cat_proxy.seq_2, true)
-    cat_cat_result.seq_1_score, _ = count_blosum(cat_cat_proxy.seq_1, cat_cat_proxy.seq_1)
-    cat_cat_result.seq_2_score, _ = count_blosum(cat_cat_proxy.seq_2, cat_cat_proxy.seq_2)
-    make_local
-    cat_cat_result.check
   end
 
   def make_local
-    no_gap_seq_1 = cat_cat_proxy.seq_1.gsub("-","")
-    no_gap_seq_2 = cat_cat_proxy.seq_2.gsub("-","")
-    locals = local_recursive(no_gap_seq_1, no_gap_seq_2)
-    local_1 = ""
-    local_2 = ""
-    local_1_for_score = ""
-    local_2_for_score = ""
-    locals.each do |local_split|
-      local_1 += local_split.get_for_coords_seq(1)
-      local_2 += local_split.get_for_coords_seq(2)
-    end
-    locals.each do |local_split|
-      next if local_split.type == LocalReqursiveResult::BAD 
-      local_1_for_score += local_split.get_raw.first
-      local_2_for_score += local_split.get_raw.last
-    end
-
-    locals.each do |local_split|
-      next if local_split.type == LocalReqursiveResult::BAD
-      local_split.score, _ = count_blosum(local_split.seq_1,local_split.seq_2)
-      local_split.score_seq_1, _ = count_blosum(local_split.seq_1,local_split.seq_1)
-      local_split.score_seq_2, _ = count_blosum(local_split.seq_2,local_split.seq_2)
-    end
-
-    set_exons_for_locals(locals)
-    IterSaver.save(cat_cat_proxy, locals)
-
-    cat_cat_result.locals = locals
-    cat_cat_result.local_score, _ = count_blosum(local_1_for_score, local_2_for_score)
-    cat_cat_result.local_self_1_score, _ = count_blosum(local_1_for_score, local_1_for_score)
-    cat_cat_result.local_self_2_score, _ = count_blosum(local_2_for_score, local_2_for_score)
-    cat_cat_result.local_borders_seq_1 = get_local_borders(local_1, cat_cat_proxy.seq_1)
-    cat_cat_result.local_borders_seq_2 = get_local_borders(local_2, cat_cat_proxy.seq_2)
-    raise "local 1 borders error" if cat_cat_result.local_borders_seq_1.length%2 != 0
-    raise "local 2 borders error" if cat_cat_result.local_borders_seq_2.length%2 != 0
-  end
-
-  def has_multiple?
-    return (cat_cat_result.locals.map(&:seq1_exons_ids).map(&:length).max > 1 ) & (cat_cat_result.locals.map(&:seq2_exons_ids).map(&:length).max > 1)
+    no_gap_seq_1 = cat_cat_proxy.split.seq_1.gsub("-","")
+    no_gap_seq_2 = cat_cat_proxy.split.seq_2.gsub("-","")
+    cat_cat_result = CatCatResult.new
+    cat_cat_result.locals = local_recursive(no_gap_seq_1, no_gap_seq_2)
+    return cat_cat_result
+    #set_exons_for_locals(locals)
   end
 
   def local_recursive(seq_1, seq_2, len_coef = 1.0, iter = 1)
@@ -88,7 +45,6 @@ class CatCatMatcher
       al_1, al_2 = margin(seq_1, seq_2)
       final = [LocalReqursiveResult.new(al_1, al_2, LocalReqursiveResult::BAD)]
     else
-      self.cat_cat_result.local_iters += 1
       final = local_recursive(left_part_1,left_part_2,left_length_coef, iter+1) + 
               [LocalReqursiveResult.new(local_result.align_1, local_result.align_2, LocalReqursiveResult::GOOD, iter)] + 
               local_recursive(right_part_1,right_part_2,right_length_coef,iter+1)
