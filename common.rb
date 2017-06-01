@@ -15,6 +15,9 @@ class Split
   attr_accessor :org_exons_1
   attr_accessor :org_exons_2
 
+  attr_accessor :split_id
+  attr_accessor :points
+
   def initialize(organism, match_organism, seq_1="", seq_2="", start_coord, end_coord, type)
     self.organism = organism
     self.match_organism = match_organism
@@ -25,6 +28,55 @@ class Split
     self.type = type
     self.org_exons_1 = []
     self.org_exons_2 = []
+    self.split_id = "undefined"
+  end
+
+  def self.header(output_filename)
+    header = "split_id,org_name,match_org_name,org_exons,match_org_exons,org_exons_coords,match_org_exons_coords,#org_points,#match_org_points,start,end,\n"
+    File.write("#{output_filename}_splits.csv",header)
+  end
+
+  def for_split_table(output_filename)
+    data = "#{split_id},#{self.organism.code_name},#{self.match_organism.code_name},#{org_exons_1.map(&:to_s).join(";")},#{org_exons_2.map(&:to_s).join(";")},#{get_org_exons_coords},#{get_match_org_exons_coords},#{points.organism_points.length},#{points.match_organism_points.length},#{start_coord},#{end_coord}\n"
+    File.open("#{output_filename}_splits.csv", 'a') { |file| file.write(data) }
+  end
+
+  def self.point_header(output_filename)
+    header = "split_id,org_name,match_org_name,start_exon_id,start_exon_coords,end_exon_id,end_exon_coords,start,end,type\n"
+    File.write("#{output_filename}_points.csv",header)
+  end
+
+  def for_point_table(output_filename)
+    points.organism_points.each do |point|
+      data = point_table_record(self.organism.code_name, self.match_organism.code_name, organism, point)
+      File.open("#{output_filename}_points.csv", 'a') { |file| file.write(data) } if !data.nil?
+    end
+    points.match_organism_points.each do |point|
+      data = point_table_record(self.match_organism.code_name, self.organism.code_name, match_organism, point)
+      File.open("#{output_filename}_points.csv", 'a') { |file| file.write(data) } if !data.nil?
+    end
+  end
+
+  def point_table_record(org_name, match_org_name, organism, point)
+      data = "#{split_id},#{org_name},#{match_org_name},"
+      if point.is_uu?
+        organism.exons.each_with_index do |exon, index| 
+          if (exon.start > point.start)
+            data += "#{organism.exons[index-1].uuid},#{organism.exons[index-1].get_coords_for_table},"
+            data += "#{exon.uuid},#{exon.get_coords_for_table},"
+            break
+          end
+        end
+      else
+        if (point.is_occurate?) & (point.start == 0) & (point.finish == 0)
+          data += "#{organism.exons[0].uuid},#{organism.exons[0].get_coords_for_table},"*2
+        else
+          organism.exons.each { |exon| (data += "#{exon.uuid},#{exon.get_coords_for_table},"; break) if intersect?(point.as_range, exon.as_range) }
+          organism.exons.reverse.each { |exon| (data += "#{exon.uuid},#{exon.get_coords_for_table},"; break) if intersect?(point.as_range, exon.as_range) }
+        end
+      end
+      data += "#{point.start},#{point.finish},#{point.type}\n"
+      return data
   end
 
   def print
@@ -36,6 +88,21 @@ class Split
     puts "#{seq_2}"
   end
 
+  def get_coords
+    return [start_coord, end_coord]
+  end
+
+  def get_org_exons_coords
+    return self.org_exons_1.map { |exon_id| "(#{self.organism.exons_coords[exon_id].join(';')})" }.join(";")
+  end
+
+  def get_match_org_exons_coords
+    return self.org_exons_2.map { |exon_id| "(#{self.match_organism.exons_coords[exon_id].join(';')})" }.join(";")
+  end
+
+  def intersect?(first_range, second_range)
+    return ([first_range.begin, second_range.begin].max..[first_range.max, second_range.max].min).size > 0
+  end
 end
 
 class ExonsSplitsIds
@@ -91,10 +158,30 @@ class CatCatProxy
   attr_accessor :split
   attr_accessor :blosum
 
-  def initialize(pair_id, split, blosum )
+  def initialize(pair_id, split, blosum)
     self.pair_id = pair_id
     self.split = split
     self.blosum = blosum
+  end
+
+  def coords
+    return [split.start_coord, split.end_coord]
+  end
+
+  def get_org_exons
+    return split.org_exons_1
+  end
+
+  def get_match_org_exons
+    return split.org_exons_2
+  end
+
+  def seq_1
+    return split.seq_1
+  end
+
+  def seq_2
+    return split.seq_2
   end
 
 end
@@ -107,14 +194,6 @@ class CatCatResult
   def initialize
     self.local_iters = 0
   end
-
-  def check
-    if ((seq_1_score < usual_score) || (seq_2_score < usual_score))
-      raise "self score > usual score"  
-    end
-
-  end
-
 
   def local_seq_1
     return locals.map{ |local| local.get_formatted_seq(1) }.join("")
@@ -148,54 +227,106 @@ end
 
 class Points
 
+  attr_accessor :pair_id
   attr_accessor :organism
   attr_accessor :match_organism
-  attr_accessor :points
+  attr_accessor :organism_points
+  attr_accessor :match_organism_points
+
 
   def initialize(organism, match_organism)
     self.organism = organism
     self.match_organism = match_organism
-    self.points = []
+    self.pair_id = "undefined"
   end
 
   def make_points(cat_res, split)
+    self.pair_id = split.split_id
+    self.organism_points = []
+    self.match_organism_points = []
     local_seq_1 = cat_res.local_seq_1_for_coords
     local_seq_2 = cat_res.local_seq_2_for_coords
     good_uu_coords_seq_1 = get_good_uu_coords(local_seq_1)
     good_uu_coords_seq_2 = get_good_uu_coords(local_seq_2)
     bad_uu_coords_seq_1 = get_bad_uu_coords(local_seq_1)
     bad_uu_coords_seq_2 = get_bad_uu_coords(local_seq_2)
-    
-    puts "#{split.seq_1}"
-    puts "#{split.seq_2}"
-    puts "----"
-    puts "#{local_seq_1}"
-    puts "#{local_seq_2}"
-    puts "#{good_uu_coords_seq_1}"
-    puts "#{good_uu_coords_seq_2}"
-    puts "#{bad_uu_coords_seq_1}"
-    puts "#{bad_uu_coords_seq_2}"
-    puts "--------------------------"
 
     good_uu_coords_seq_1.each do |coord|
-      puts "Y : #{split.seq_2[0..(get_coords_in_align(split.seq_2, local_seq_2, coord))]}"
+      point = make_good_point(split.seq_2, local_seq_2, split.seq_1, local_seq_1, coord, good_uu_coords_seq_2, split.start_coord)
+      self.match_organism_points << point
+      #puts "G1 : #{split.seq_2[0..(get_coords_in_align(split.seq_2, local_seq_2, coord))]}"
     end
     bad_uu_coords_seq_1.each do |coord|
-      puts "Y : #{split.seq_2[0..(get_coords_in_align(split.seq_2, local_seq_2, coord))]} "
+      point = make_bad_point(split.seq_2, local_seq_2, coord, split.start_coord)
+      self.match_organism_points << point if !point.nil?
+      #puts "B1 : #{split.seq_2[0..(get_coords_in_align(split.seq_2, local_seq_2, coord))]} "
     end
-
     good_uu_coords_seq_2.each do |coord|
-      puts "Y : #{split.seq_1[0..(get_coords_in_align(split.seq_1, local_seq_1, coord))]} "
+      point = make_good_point(split.seq_1, local_seq_1, split.seq_2, local_seq_2, coord, good_uu_coords_seq_1, split.start_coord)
+      self.organism_points << point
+      #puts "G2 : #{split.seq_1[0..(get_coords_in_align(split.seq_1, local_seq_1, coord))]} "
     end
     bad_uu_coords_seq_2.each do |coord|
-      puts "Y : #{split.seq_1[0..(get_coords_in_align(split.seq_1, local_seq_1, coord))]} "
+      point = make_bad_point(split.seq_1, local_seq_1, coord, split.start_coord)
+      self.organism_points << point if !point.nil?
+      #puts "B2 : #{split.seq_1[0..(get_coords_in_align(split.seq_1, local_seq_1, coord))]} "
     end
-
-
 
   end
 
+
   private
+
+  def make_bad_point(seq, local, coord, split_start)
+    borders = get_bad_sector_borders(local, coord)
+    start = get_coords_in_align(seq, local, borders[0], "start")+split_start
+    finish = get_coords_in_align(seq, local, borders[1], "end")+split_start
+    return nil if finish+1 < start
+    if start-1 == finish 
+      start -= 1
+      point = SplitPoint.new(start, finish,99, SplitPoint::OCCURATE)
+    else
+      point = SplitPoint.new(start, finish,99, SplitPoint::FUZZY)
+    end
+    return point
+  end
+
+  def get_bad_sector_borders(local, coord)
+    start_coord = coord
+    end_coord = coord
+    while start_coord > 0
+      if !local[start_coord-1].nil?
+        if local[start_coord-1].downcase == local[start_coord-1]
+          start_coord-=1 
+        else
+          break
+        end
+      else
+        break
+      end
+    end
+    while end_coord < local.length
+      if !local[end_coord+1].nil?
+        if local[end_coord+1].downcase == local[end_coord+1]
+          end_coord += 1
+        else
+          break
+        end
+      else
+        end_coord += 1
+        break
+      end
+    end
+    return [start_coord, end_coord]
+  end
+
+  def make_good_point(seq, local, seq_2, local_2, coord, other_coords, split_start)
+    align_coords = get_coords_in_align(seq, local, coord) + split_start
+    caused_coords = get_coords_in_align(seq_2, local_2, coord) + split_start
+    type = other_coords.include?(coord) ? SplitPoint::UU : SplitPoint::OCCURATE
+    point = SplitPoint.new(align_coords,align_coords,caused_coords,type)
+    return point
+  end
 
   def get_good_uu_coords(sequence)
     i = -1
@@ -215,21 +346,22 @@ class Points
     return all
   end
 
-  def get_coords_in_align(sequence, local, coord)
-    return (get_align_coords(sequence, get_letters_before(local,coord))-1)
+  def get_coords_in_align(sequence, local, coord, coord_type = "start")
+    coord = (get_align_coords(sequence, get_letters_before(local,coord)))
+    return coord_type == "start" ? coord : coord-1
   end
 
   def get_letters_before(sequence, coord)
+    return 0 if coord == 0
     return sequence[0..(coord-1)].gsub("-","").length
   end
 
-  def get_align_coords(sequence, coord)
+  def get_align_coords(sequence, skip_letters)
     result = 0
     (sequence.length-1).times do |pos|
-      coord -= 1 if sequence[pos] != "-"
-      #result << sequence[pos]
+      skip_letters -= 1 if sequence[pos] != "-"
       result += 1
-      break if coord == 0
+      break if skip_letters == 0
     end
     return result
   end
@@ -239,21 +371,21 @@ end
 
 class SplitPoint
 
-  OCCURATE = 0
-  FUZZY = 1
-  UU = 2
+  OCCURATE = "occurate"
+  FUZZY = "fuzzy"
+  UU = "uu"
 
   attr_accessor :start
   attr_accessor :finish
   attr_accessor :type
-  attr_accessor :seq_number
+  attr_accessor :caused_coords
+  attr_accessor :caused_exon
 
-  def close_reg(finish)
-    if type == SplitPoint::FUZZY
-      self.finish = finish
-    else
-      self.finish = start
-    end
+  def initialize(start, finish, caused_coords, type)
+    self.start = start
+    self.finish = finish
+    self.type = type
+    self.caused_coords = caused_coords
   end
 
   def is_occurate?
@@ -266,6 +398,19 @@ class SplitPoint
 
   def is_uu?
     return type == SplitPoint::UU
+  end
+
+  def get_coords
+    return [self.start, self.finish]
+  end
+
+  def as_range
+    return (self.start..self.finish)
+  end
+
+  def get_svg_color
+    color = "rgb(232, 221, 18)"
+    return color    
   end
 
 end

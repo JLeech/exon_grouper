@@ -58,6 +58,7 @@ exon_grouper.prepare_data
 time2 = Time.now
 puts "Preparing data: #{time2 - time1}"
 # групировка на основе вложенности
+exon_grouper.draw_as_svg_rectangels("uuid")
 exon_grouper.group
 time3 = Time.now
 puts "Grouping: #{time3 - time1}"
@@ -73,5 +74,5 @@ puts "Grouping: #{time3 - time1}"
 time4 = Time.now
 puts "Cliques: #{time4 - time1}"
 #exon_grouper.draw_as_svg_rectangels("get_unique_groups")
-exon_grouper.draw_as_svg_rectangels("uuid")
+
 #exon_grouper.print_groups_coords

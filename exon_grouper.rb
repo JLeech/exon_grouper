@@ -41,7 +41,7 @@ class ExonGrouper
     # отбираются только первые self.organism_number организмов
     all_organisms = DataProcessor.new(self.path_to_file, self.path_to_alignment).prepare
     #self.organisms = all_organisms[0..(self.organism_number-1)]
-    self.organisms = [all_organisms[4], all_organisms[14]]
+    self.organisms = all_organisms[0..7]
     clear_output_file
     Organism.set_headers(output_filename)
     self.organisms.each{ |org| org.save_references(output_filename) }
@@ -54,94 +54,64 @@ class ExonGrouper
 
   def count_cat_cat_statistics
     # подготовка файла статистики
-    CatCatMatcher.csv_header(output_filename)
+    #CatCatMatcher.csv_header(output_filename)
     CatCatMatcher.clear_output_file(output_filename)
     pair_counter = 0
-    
+    file = File.open("/home/eve/Documents/biology/exon_grouper/results/result_dscam_uuid.svg", 'a')
     self.organisms.each_with_index do |organism, index|
       puts "ORG: #{organism.name}"
+      puts "EXN: #{organism.exons.map(&:get_coords)}"
+
       break if index+1 == self.organisms.length
       self.organisms[(index+1)..-1].each do |match_organism|
         splits = get_cat_cat_splits(organism, match_organism) # {"coords", "organism", "match_organism"}
         exons_in_splits = ExonsSplitsIds.new(splits, organism, match_organism)
         exons_in_splits.set_to_splits
-        split_points = Points.new(organism, match_organism)
         splits.each_with_index do |split, split_index|
-            #split.print
-          pair_id = get_pair_id( split_index, organism.number, match_organism.number )
-          proxy = CatCatProxy.new(pair_id, split, self.blossum_matrix)
+          split_id = get_split_id( split_index, organism.number, match_organism.number )
+          split.split_id = split_id
+          proxy = CatCatProxy.new(split_id, split, self.blossum_matrix)
           cat_cat_matcher = CatCatMatcher.new(proxy)
           cat_cat_result = cat_cat_matcher.make_local
-          split_points.make_points(cat_cat_result, split)
+          
+          split.points = Points.new(organism, match_organism)
+          split.points.make_points(cat_cat_result, split)
+
+          split.for_split_table(output_filename)
+          cat_cat_result.save_alignment(output_filename, proxy)
+
+          split.for_point_table(output_filename)
+          split.points.organism_points.each do |point|
+              draw_exon_box(index, point,file, "","fill-opacity=0.03")  
+          end
+          split.points.match_organism_points.each do |point|
+              draw_exon_box(index, point,file, "","fill-opacity=0.03")  
+          end
+          # if (split_points.organism_points + split_points.match_organism_points).length > 0
+          #   puts "S : #{pair_id}"
+          #   puts "OP: #{split_points.organism_points.map(&:get_coords)}"
+          #   puts "MP: #{split_points.match_organism_points.map(&:get_coords)}"
+          #   split_points.organism_points.each do |point|
+          #     puts "PC : #{point.get_coords} -> #{point.caused_coords}"
+          #     puts "T  : #{point.type}"
+          #     puts "O  : #{organism.alignment[point.start..point.finish]}"
+          #     puts "M  : #{match_organism.alignment[point.caused_coords..point.caused_coords]}"
+          #   end
+          #   split_points.match_organism_points.each do |point|
+          #     puts "MPC: #{point.get_coords} -> #{point.caused_coords}"
+          #     puts "T  : #{point.type}"
+          #     puts "M  : #{organism.alignment[(point.caused_coords-10)..(point.caused_coords+10)]}"
+          #     puts "MO : #{match_organism.alignment[point.start..point.finish]}"
+          #   end
+          # end
+
+
         end
 
 
-
-
-
-      #   current_split_offset = 0
-      #   exons_in_splits = ExonsSplitsIds.new(splits, organism, match_organism)
-        # (0..splits.length).each do |index|
-        #   puts "#{exons_in_splits.get_ids_for_organism[index]}"
-        #   puts "#{exons_in_splits.get_ids_for_match_organism[index]}"
-        # end
-
-        #   splits["organism"].each_with_index do |org_part, part_index|  
-
-        #     coords = part_index == 0 ? [0, splits["coords"][0]] : [splits["coords"][part_index-1]+2, splits["coords"][part_index]] # +2, because of UU
-            
-        #     if part_index == (splits["organism"].length-1)
-        #       coords = [splits["coords"][part_index-1], splits["coords"][part_index-1] + splits["organism"][-1].length + 2 ]
-        #     end
-        #     match_org_part = splits["match_organism"][part_index]
-            
-        #     sequences = [org_part, match_org_part]
-        #     cat_cat_proxy = CatCatProxy.new(sequences, coords, self.blossum_matrix, organism, match_organism, 
-        #                                     get_pair_id( part_index, organism.number, match_organism.number ),
-        #                                     exons_in_splits, part_index, output_filename)
-        #     cat_cat_matcher = CatCatMatcher.new(cat_cat_proxy)
-        #     cat_cat_matcher.count_statistics
-        #     cat_cat_matcher.save_to_csv(output_filename)
-        #     # puts "O : #{org_part}"
-        #     # puts "M : #{match_org_part}"
-        #     # puts "\n"
-        #     seq_1_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_1
-        #     seq_2_bord = cat_cat_matcher.cat_cat_result.local_borders_seq_2
-            
-        #     seq_1_bord = seq_1_bord.each_slice(2).to_a.map { |slice| slice.map{ |val| val+current_split_offset } }
-        #     seq_2_bord = seq_2_bord.each_slice(2).to_a.map { |slice| slice.map{ |val| val+current_split_offset } }
-        #     # puts "LB: #{seq_1_bord}"
-        #     # puts "LB: #{seq_2_bord}"
-        #     # res_1 = "C : "
-        #     # seq_1_bord.each do |slice|
-        #     #   res_1 += "#{organism.alignment[slice[0]..(slice[1])]}"
-        #     # end
-        #     # puts res_1  
-
-        #     # res_2 = "C : "
-        #     # seq_2_bord.each do |slice|
-        #     #   res_2 += "#{match_organism.alignment[slice[0]..(slice[1])]}"
-        #     # end
-        #     # puts res_2
-        #     # puts "---------------"
-        #     # if cat_cat_matcher.has_multiple?
-        #     #   con_cat_matcher = ConCatMatcher.new(cat_cat_proxy)
-        #     #   con_cat_matcher.align
-        #     # end
-        #     self.local_borders[organism.name] += seq_1_bord
-        #     self.local_borders[match_organism.name] += seq_2_bord
-        #     pair_counter += 1
-        #     current_split_offset += org_part.length+2
-        #   end
-        # end
-        # # puts "#{local_borders}"
-        # border_data = "organism:   #{organism.name}\n"
-        # border_data +="starts:     #{local_borders[organism.name].map{ |pair| pair[0] }}\n"
-        # border_data +="ends:       #{local_borders[organism.name].map{ |pair| pair[1] }}\n" 
-
-        # File.open("#{self.output_filename}_borders.txt", 'a') { |file| file.write(border_data) }
       end
     end
+    file.write("</svg>")
   end
 
   def get_cat_cat_splits(organism, match_organism)
@@ -149,42 +119,31 @@ class ExonGrouper
     match_organism_coords = get_uu_coords(match_organism)
     aligned_coords = organism_coords & match_organism_coords
     
+
     splits = []
 
-    if uu_start_match(organism_coords, match_organism_coords, aligned_coords)
-      aligned_coords.each_with_index do |coord, index|
-        break if index == aligned_coords.length-1
-        organism_part = organism.alignment[(aligned_coords[index]+2)..(aligned_coords[index+1]-1)]#.gsub("UU","--")
-        match_organism_part = match_organism.alignment[(aligned_coords[index]+2)..(aligned_coords[index+1]-1)]#.gsub("UU","--")
-        start_coord = aligned_coords[index]+2
-        end_coord = aligned_coords[index+1]-1
-        splits << Split.new(organism, match_organism, organism_part, match_organism_part, start_coord,end_coord,Split::NORMAL)
-      end
-    else
-      aligned_coords.each_with_index do |coord, index|
-        if index == 0
-          organism_part = organism.alignment[0..(coord-1)]#.gsub("UU","--")
-          match_organism_part = match_organism.alignment[0..(coord-1)]#.gsub("UU","--")
-          start_coord = 0
-          end_coord = coord-1
-          splits << Split.new(organism, match_organism, organism_part, match_organism_part, start_coord,end_coord,Split::SINGLE)
-          next
-        end
-        organism_part = organism.alignment[(aligned_coords[index-1]+2)..(coord-1)]#.gsub("UU","--")
-        match_organism_part = match_organism.alignment[(aligned_coords[index-1]+2)..(coord-1)]#.gsub("UU","--")
-        start_coord = aligned_coords[index-1]+2
+    aligned_coords.each_with_index do |coord, index|
+      if index == 0
+        organism_part = organism.alignment[0..(coord-1)]#.gsub("UU","--")
+        match_organism_part = match_organism.alignment[0..(coord-1)]#.gsub("UU","--")
+        start_coord = 0
         end_coord = coord-1
-        splits << Split.new(organism, match_organism, organism_part, match_organism_part, start_coord,end_coord,Split::NORMAL)
+        splits << Split.new(organism, match_organism, organism_part, match_organism_part, start_coord,end_coord,Split::SINGLE)
+        next
       end
+      organism_part = organism.alignment[(aligned_coords[index-1]+2)..(coord-1)]#.gsub("UU","--")
+      match_organism_part = match_organism.alignment[(aligned_coords[index-1]+2)..(coord-1)]#.gsub("UU","--")
+      start_coord = aligned_coords[index-1]+2
+      end_coord = coord-1
+      splits << Split.new(organism, match_organism, organism_part, match_organism_part, start_coord,end_coord,Split::NORMAL)
     end
 
-    if !uu_end_match(organism_coords, match_organism_coords, aligned_coords)
-      organism_part = organism.alignment[(aligned_coords[-1]+2)..(-1)]#.gsub("UU","--")
-      match_organism_part = match_organism.alignment[(aligned_coords[-1]+2)..(-1)]#.gsub("UU","--")      
-      start_coord = aligned_coords[-1]+2
-      end_coord = organism.alignment.length-1
-      splits << Split.new(organism, match_organism, organism_part, match_organism_part, start_coord,end_coord,Split::SINGLE)
-    end
+    organism_part = organism.alignment[(aligned_coords[-1]+2)..(-1)]#.gsub("UU","--")
+    match_organism_part = match_organism.alignment[(aligned_coords[-1]+2)..(-1)]#.gsub("UU","--")      
+    start_coord = aligned_coords[-1]+2
+    end_coord = organism.alignment.length-1
+    splits << Split.new(organism, match_organism, organism_part, match_organism_part, start_coord,end_coord,Split::SINGLE)
+
     return splits
   end
 
@@ -208,11 +167,10 @@ class ExonGrouper
         draw_organism_line(index, svg_width, file)
         print_organism_name(organism, index, file)
         organism.exons.each do |exon|
-          draw_exon_box(organism, index, exon, file, exon.send(data_to_show))
+          draw_exon_box(index, exon, file, exon.send(data_to_show))
         end
       end
       #draw_exon_limits(file, svg_height)
-      file.write("</svg>")
     end
 
     puts "exon number : #{organisms.map{ |org| org.exons.length }.inject(:+)}"
@@ -242,14 +200,17 @@ class ExonGrouper
 private
 
   def clear_output_file
-    header = "ex1,ex2,pair_id,st1,end1,st2,end2\n"
-    File.open("#{self.output_filename}_borders.txt", 'w') { |file| file.write(header) }
-    IterSaver.header(self.output_filename)
+    # header = "ex1,ex2,pair_id,st1,end1,st2,end2\n"
+    # File.open("#{self.output_filename}_borders.txt", 'w') { |file| file.write(header) }
+    # IterSaver.header(self.output_filename)
+    #Points.header(self.output_filename)
+    Split.header(self.output_filename)
+    Split.point_header(self.output_filename)
     #ConCatMatcher.header(self.output_filename)
     #ConCatMatcher.alignements_header(self.output_filename)
   end
 
-  def get_pair_id(number, org_num, match_org_num)
+  def get_split_id(number, org_num, match_org_num)
     return "A"+"0"*(3-number.to_s.length) + number.to_s + "_" + 
            "0"*(3-org_num.to_s.length) + org_num.to_s + "_" + 
            "0"*(3-match_org_num.to_s.length) + match_org_num.to_s
@@ -281,17 +242,18 @@ private
     draw_line(x1, y1, x1, svg_height, color, file)
   end
 
-  def draw_exon_box(organism, index, exon, file, data_to_show)
-    y_coord = 40*(index+1)
+  def draw_exon_box(index, exon, file, data_to_show, additional_params="")
+    y_coord = additional_params.empty? ? (40*(index+1)) : (40*(index+1)-4)
     x_start_coords = 100
     width = exon.finish - exon.start
     color = exon.get_svg_color
-
     x = (exon.start+x_start_coords)*2
     y = y_coord-15
+    width = 1 if width == 0 
+
     width = width*2
     height = 30
-    draw_rect(x, y, width, height, color, file)
+    draw_rect(x, y, width, height, color, file,additional_params)
 
     x_text = (exon.start+x_start_coords)*2
     draw_text(x_text, y_coord, data_to_show, file)
@@ -301,8 +263,8 @@ private
     file.write("<line x1=\"#{x1}\" y1=\"#{y1}\" x2=\"#{x2}\" y2=\"#{y2}\" style=\"stroke:#{color};stroke-width:1\" />")
   end
 
-  def draw_rect(x,y,width,height,color,file)
-    file.write("<rect x=\"#{x}\" y=\"#{y}\" width=\"#{width}\" height=\"#{height}\" style=\"fill:#{color};stroke:black;stroke-width:0\" />\n")
+  def draw_rect(x,y,width,height,color,file, additional_params)
+    file.write("<rect x=\"#{x}\" y=\"#{y}\" width=\"#{width}\" height=\"#{height}\" style=\"fill:#{color};stroke:black;stroke-width:0;#{additional_params}\" />\n")
   end
 
   def draw_text(x,y,text,file)
