@@ -40,7 +40,7 @@ def check_options(options)
   end
 
   if options["organism_number"].nil?
-    puts "more them zero organisms should be selected"
+    puts "more then zero organisms should be selected"
     return false
   end
 

@@ -40,8 +40,9 @@ class ExonGrouper
   def prepare_data
     # отбираются только первые self.organism_number организмов
     all_organisms = DataProcessor.new(self.path_to_file, self.path_to_alignment).prepare
-    #self.organisms = all_organisms[0..(self.organism_number-1)]
-    self.organisms = all_organisms[0..7]
+    self.organisms = all_organisms[0..(self.organism_number-1)]
+    #self.organisms = [all_organisms[0],all_organisms[2]]
+    #self.organisms = all_organisms[0..10]
     clear_output_file
     Organism.set_headers(output_filename)
     self.organisms.each{ |org| org.save_references(output_filename) }
@@ -59,11 +60,13 @@ class ExonGrouper
     pair_counter = 0
     file = File.open("/home/eve/Documents/biology/exon_grouper/results/result_dscam_uuid.svg", 'a')
     self.organisms.each_with_index do |organism, index|
+      next if organism.name == "Colius_striatus"
       puts "ORG: #{organism.name}"
       puts "EXN: #{organism.exons.map(&:get_coords)}"
-
+      match_org_index = index
       break if index+1 == self.organisms.length
       self.organisms[(index+1)..-1].each do |match_organism|
+        match_org_index += 1
         splits = get_cat_cat_splits(organism, match_organism) # {"coords", "organism", "match_organism"}
         exons_in_splits = ExonsSplitsIds.new(splits, organism, match_organism)
         exons_in_splits.set_to_splits
@@ -81,34 +84,13 @@ class ExonGrouper
           cat_cat_result.save_alignment(output_filename, proxy)
 
           split.for_point_table(output_filename)
-          split.points.organism_points.each do |point|
-              draw_exon_box(index, point,file, "","fill-opacity=0.03")  
+          split.points.organism_uniq_points.each do |point|
+              draw_box(index, point,file, "")
           end
-          split.points.match_organism_points.each do |point|
-              draw_exon_box(index, point,file, "","fill-opacity=0.03")  
+          split.points.match_organism_uniq_points.each do |point|
+              draw_box(match_org_index, point,file, "")
           end
-          # if (split_points.organism_points + split_points.match_organism_points).length > 0
-          #   puts "S : #{pair_id}"
-          #   puts "OP: #{split_points.organism_points.map(&:get_coords)}"
-          #   puts "MP: #{split_points.match_organism_points.map(&:get_coords)}"
-          #   split_points.organism_points.each do |point|
-          #     puts "PC : #{point.get_coords} -> #{point.caused_coords}"
-          #     puts "T  : #{point.type}"
-          #     puts "O  : #{organism.alignment[point.start..point.finish]}"
-          #     puts "M  : #{match_organism.alignment[point.caused_coords..point.caused_coords]}"
-          #   end
-          #   split_points.match_organism_points.each do |point|
-          #     puts "MPC: #{point.get_coords} -> #{point.caused_coords}"
-          #     puts "T  : #{point.type}"
-          #     puts "M  : #{organism.alignment[(point.caused_coords-10)..(point.caused_coords+10)]}"
-          #     puts "MO : #{match_organism.alignment[point.start..point.finish]}"
-          #   end
-          # end
-
-
         end
-
-
       end
     end
     file.write("</svg>")
@@ -118,7 +100,6 @@ class ExonGrouper
     organism_coords = get_uu_coords(organism)
     match_organism_coords = get_uu_coords(match_organism)
     aligned_coords = organism_coords & match_organism_coords
-    
 
     splits = []
 
@@ -167,7 +148,7 @@ class ExonGrouper
         draw_organism_line(index, svg_width, file)
         print_organism_name(organism, index, file)
         organism.exons.each do |exon|
-          draw_exon_box(index, exon, file, exon.send(data_to_show))
+          draw_box(index, exon, file, exon.send(data_to_show))
         end
       end
       #draw_exon_limits(file, svg_height)
@@ -242,20 +223,24 @@ private
     draw_line(x1, y1, x1, svg_height, color, file)
   end
 
-  def draw_exon_box(index, exon, file, data_to_show, additional_params="")
-    y_coord = additional_params.empty? ? (40*(index+1)) : (40*(index+1)-4)
+  def draw_box(index, box_data, file, data_to_show)
+    if box_data.class == SplitPoint
+      y_coord = 40*(index+1)-4
+    else 
+      y_coord = 40*(index+1)
+    end
     x_start_coords = 100
-    width = exon.finish - exon.start
-    color = exon.get_svg_color
-    x = (exon.start+x_start_coords)*2
+    width = box_data.finish - box_data.start
+    color = box_data.get_svg_color
+    x = (box_data.start+x_start_coords)*2
     y = y_coord-15
     width = 1 if width == 0 
 
     width = width*2
     height = 30
-    draw_rect(x, y, width, height, color, file,additional_params)
+    draw_rect(x, y, width, height, color, file)
 
-    x_text = (exon.start+x_start_coords)*2
+    x_text = (box_data.start+x_start_coords)*2
     draw_text(x_text, y_coord, data_to_show, file)
   end
 
@@ -263,8 +248,8 @@ private
     file.write("<line x1=\"#{x1}\" y1=\"#{y1}\" x2=\"#{x2}\" y2=\"#{y2}\" style=\"stroke:#{color};stroke-width:1\" />")
   end
 
-  def draw_rect(x,y,width,height,color,file, additional_params)
-    file.write("<rect x=\"#{x}\" y=\"#{y}\" width=\"#{width}\" height=\"#{height}\" style=\"fill:#{color};stroke:black;stroke-width:0;#{additional_params}\" />\n")
+  def draw_rect(x,y,width,height,color,file)
+    file.write("<rect x=\"#{x}\" y=\"#{y}\" width=\"#{width}\" height=\"#{height}\" style=\"fill:#{color};stroke:black;stroke-width:0;\" />\n")
   end
 
   def draw_text(x,y,text,file)

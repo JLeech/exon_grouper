@@ -274,7 +274,19 @@ class Points
 
   end
 
+  def organism_uniq_points
+    if @organism_uniq_points.nil?
+     @organism_uniq_points = organism_points.uniq{|e| [e.start, e.finish, e.type]}
+    end
+    return @organism_uniq_points
+  end
 
+  def match_organism_uniq_points
+    if @match_organism_uniq_points.nil?
+     @match_organism_uniq_points = match_organism_points.uniq{|e| [e.start, e.finish, e.type]}
+    end
+    return @match_organism_uniq_points
+  end
   private
 
   def make_bad_point(seq, local, coord, split_start)
@@ -361,7 +373,13 @@ class Points
     (sequence.length-1).times do |pos|
       skip_letters -= 1 if sequence[pos] != "-"
       result += 1
-      break if skip_letters == 0
+      if skip_letters == 0
+        ((result+1)..(sequence.length-1)).to_a.each do |skipper|
+          break if sequence[skipper] != "-"
+          result += 1
+        end
+        break
+      end
     end
     return result
   end
@@ -409,7 +427,15 @@ class SplitPoint
   end
 
   def get_svg_color
-    color = "rgb(232, 221, 18)"
+    color = "rgba(0,0,0,1.0)"
+    if is_occurate?
+      color = "rgba(232, 10, 18, 0.2)"
+    elsif is_fuzzy?
+      color = "rgba(232, 221, 18, 0.2)"
+    elsif is_uu?
+      color = "rgba(10, 221, 18, 0.2)"
+    end
+      
     return color    
   end
 
